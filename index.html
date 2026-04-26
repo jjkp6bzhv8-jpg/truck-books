@@ -631,6 +631,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="duplicateModal">
+  <div class="modal">
+    <h3>⚠️ Duplicate Receipt?</h3>
+    <p id="duplicateModalMsg" style="font-size:13px;color:#888;margin-bottom:16px;line-height:1.6"></p>
+    <div class="modal-btns">
+      <button class="btn btn-dark" onclick="closeDuplicateModal()">Cancel</button>
+      <button class="btn btn-red" onclick="confirmSaveAnyway()">Save Anyway</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="deleteModal">
   <div class="modal">
     <h3>Delete This Receipt?</h3>
@@ -1441,6 +1452,29 @@ function compress(file, max, q) {
 
 // ── SAVE RECEIPT TO DRIVE ──
 async function saveReceipt() {
+  if (!currentResult || !currentPhoto) return;
+  if (!token) { showToast('Sign in to Google Drive first'); return; }
+
+  // ── DUPLICATE CHECK ──
+  const dup = receipts.find(r =>
+    r.vendor.toLowerCase() === (currentResult.vendor||'').toLowerCase() &&
+    r.date === currentResult.date &&
+    Math.abs(r.amount - parseFloat(currentResult.amount)) < 0.01
+  );
+  if (dup) {
+    document.getElementById('duplicateModalMsg').textContent =
+      'A receipt already exists for ' + dup.vendor + ' on ' + dup.date + ' for $' + dup.amount.toFixed(2) + '. Are you sure you want to save this again?';
+    document.getElementById('duplicateModal').classList.add('open');
+    return;
+  }
+
+  await doSaveReceipt();
+}
+
+function closeDuplicateModal() { document.getElementById('duplicateModal').classList.remove('open'); }
+function confirmSaveAnyway() { closeDuplicateModal(); doSaveReceipt(); }
+
+async function doSaveReceipt() {
   if (!currentResult || !currentPhoto) return;
   if (!token) { showToast('Sign in to Google Drive first'); return; }
   const btn = document.getElementById('saveBtn');
