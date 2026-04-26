@@ -238,6 +238,7 @@
         </div>
         <input type="file" id="eldCameraInput" accept="image/*" capture="environment" onchange="handleEldPhoto(this)">
         <img id="eldPreview" alt="ELD log preview">
+        <button class="btn btn-dark" id="eldRetakeBtn" onclick="retakeEldPhoto()" style="display:none;margin-bottom:12px">🔄 Retake Photo</button>
         <div class="spinner" id="eldSpinner">AI reading your log...</div>
 
         <div class="eld-ai-result" id="eldAiResult">
@@ -607,6 +608,7 @@ function handleEldPhoto(input) {
     eldCurrentPhoto = e.target.result;
     const img = document.getElementById('eldPreview');
     img.src = eldCurrentPhoto; img.style.display = 'block';
+    document.getElementById('eldRetakeBtn').style.display = 'block';
     document.getElementById('eldAiResult').style.display = 'none';
     document.getElementById('eldSaveBtn').style.display = 'none';
     document.getElementById('eldDateField').style.display = 'none';
@@ -666,6 +668,21 @@ async function scanEldWithAI(file) {
     console.error(e);
   }
   document.getElementById('eldSpinner').style.display = 'none';
+}
+
+function retakeEldPhoto() {
+  eldCurrentPhoto = null; eldCurrentPhotoBlob = null; eldCurrentResult = null; eldAwayFromHome = null;
+  document.getElementById('eldPreview').style.display = 'none';
+  document.getElementById('eldRetakeBtn').style.display = 'none';
+  document.getElementById('eldAiResult').style.display = 'none';
+  document.getElementById('eldDateField').style.display = 'none';
+  document.getElementById('eldMilesField').style.display = 'none';
+  document.getElementById('eldAwayField').style.display = 'none';
+  document.getElementById('eldSaveBtn').style.display = 'none';
+  document.getElementById('btnAway').className = 'away-btn';
+  document.getElementById('btnHome').className = 'away-btn';
+  document.getElementById('eldCameraInput').value = '';
+  document.getElementById('eldCameraInput').click();
 }
 
 function setAway(val) {
