@@ -106,10 +106,8 @@
   /* HAMBURGER MENU */
   .hamburger { background: none; border: none; cursor: pointer; padding: 4px 8px; display: flex; flex-direction: column; gap: 5px; }
   .hamburger span { display: block; width: 22px; height: 2px; background: #f0f0f0; border-radius: 2px; }
-  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; pointer-events: none; }
-  .drawer-overlay.open { display: block; pointer-events: all; }
-  .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #111; border-right: 1px solid #222; z-index: 60; transition: left 0.25s ease; padding-top: 60px; pointer-events: none; }
-  .drawer.open { left: 0; pointer-events: all; }
+  .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #111; border-right: 1px solid #333; z-index: 60; transition: left 0.25s ease; padding-top: 60px; pointer-events: none; }
+  .drawer.open { left: 0; pointer-events: all; box-shadow: 4px 0 20px rgba(0,0,0,0.8); }
   .drawer-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: #888; font-size: 22px; cursor: pointer; }
   .drawer-title { font-size: 11px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 1px; padding: 0 20px 10px; }
   .drawer-item { display: flex; align-items: center; gap: 14px; padding: 14px 20px; cursor: pointer; color: #888; font-size: 15px; font-weight: 600; border-bottom: 1px solid #1a1a1a; transition: all 0.15s; }
@@ -200,8 +198,7 @@
       <div class="status-pill red" id="driveStatus">NOT SIGNED IN</div>
     </div>
   </div>
-  <!-- DRAWER OVERLAY -->
-  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <!-- DRAWER -->
   <div class="drawer" id="drawer">
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
     <div class="drawer-title">Navigation</div>
@@ -685,8 +682,23 @@ async function saveEldIndex() {
 }
 
 // ── DRAWER ──
-function openDrawer() { document.getElementById('drawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('open'); }
-function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  setTimeout(() => {
+    document.addEventListener('touchstart', closeDrawerOnOutsideTap, { once: true });
+  }, 100);
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+}
+function closeDrawerOnOutsideTap(e) {
+  const drawer = document.getElementById('drawer');
+  if (!drawer.contains(e.target)) {
+    closeDrawer();
+  } else {
+    document.addEventListener('touchstart', closeDrawerOnOutsideTap, { once: true });
+  }
+}
 
 // ── TABS ──
 function switchTab(name, navId) {
