@@ -438,17 +438,21 @@ async function scanWithAI(file) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 300, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
-        { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Other","notes":"brief description"}' }
+        { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Other"}' }
       ]}]})
     });
     const d = await r.json();
     currentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    currentResult.notes = ''; // always blank - user fills in if needed
     document.getElementById('aiResultRows').innerHTML = `
       <div class="result-row"><span class="result-label">Vendor</span><span class="result-value">${currentResult.vendor}</span></div>
       <div class="result-row"><span class="result-label">Date</span><span class="result-value">${currentResult.date}</span></div>
       <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$${parseFloat(currentResult.amount).toFixed(2)}</span></div>
       <div class="result-row"><span class="result-label">Category</span><span class="result-value">${currentResult.category}</span></div>
-      <div class="result-row"><span class="result-label">Notes</span><span class="result-value">${currentResult.notes}</span></div>`;
+      <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <span class="result-label">Notes (optional)</span>
+        <input type="text" id="notesInput" placeholder="e.g. Trip to Atlanta to pick up semi" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="currentResult.notes=this.value">
+      </div>`;
     document.getElementById('aiResult').style.display = 'block';
     document.getElementById('saveBtn').style.display = 'block';
   } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
