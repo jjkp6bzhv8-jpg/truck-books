@@ -2,283 +2,304 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TruckBooks">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TruckBooks</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e8e8e8; min-height: 100vh; }
-.app { max-width: 480px; margin: 0 auto; padding: 0 0 80px 0; }
-.header { background: #16213e; padding: 20px 20px 16px; border-bottom: 1px solid #0f3460; }
-.header h1 { font-size: 22px; font-weight: 700; color: #e94560; letter-spacing: -0.5px; }
-.header p { font-size: 13px; color: #888; margin-top: 2px; }
-.credits { font-size: 11px; color: #e94560; background: rgba(233,69,96,0.1); padding: 4px 10px; border-radius: 20px; display: inline-block; margin-top: 8px; }
-.tabs { display: flex; background: #16213e; border-bottom: 1px solid #0f3460; }
-.tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; }
-.tab.active { color: #e94560; border-bottom-color: #e94560; }
-.section { display: none; padding: 16px; }
-.section.active { display: block; }
-.api-setup { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-.api-setup h3 { font-size: 14px; color: #e94560; margin-bottom: 8px; }
-.api-setup input { width: 100%; background: #0f3460; border: 1px solid #1a4a7a; border-radius: 8px; padding: 10px 12px; color: #e8e8e8; font-size: 13px; font-family: monospace; }
-.btn-save { width: 100%; background: #e94560; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-.upload-area { background: #16213e; border: 2px dashed #0f3460; border-radius: 12px; padding: 32px 20px; text-align: center; cursor: pointer; margin-bottom: 16px; }
-.upload-icon { font-size: 40px; margin-bottom: 12px; }
-.upload-area h3 { font-size: 16px; color: #e8e8e8; margin-bottom: 6px; }
-.upload-area p { font-size: 13px; color: #888; }
-#fileInput { display: none; }
-.preview-area { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: none; }
-.preview-area img { width: 100%; border-radius: 8px; max-height: 200px; object-fit: cover; }
-.btn-scan { width: 100%; background: #e94560; color: white; border: none; border-radius: 8px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
-.btn-scan:disabled { background: #555; }
-.result-card { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: none; }
-.result-card h3 { font-size: 14px; color: #e94560; margin-bottom: 12px; }
-.result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #0f3460; flex-wrap: wrap; gap: 6px; }
-.result-row:last-child { border-bottom: none; }
-.result-label { font-size: 13px; color: #888; }
-.edit-field { background: #0f3460; border: 1px solid #1a4a7a; border-radius: 6px; padding: 6px 10px; color: #e8e8e8; font-size: 14px; max-width: 200px; width: 100%; }
-select.edit-field { cursor: pointer; }
-.btn-save-receipt { width: 100%; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; }
-.loading { text-align: center; padding: 20px; display: none; }
-.loading p { color: #888; font-size: 14px; margin-top: 10px; }
-.spinner { width: 40px; height: 40px; border: 3px solid #0f3460; border-top-color: #e94560; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.receipt-item { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-.receipt-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.receipt-vendor { font-size: 15px; font-weight: 600; color: #e8e8e8; }
-.receipt-amount { font-size: 16px; font-weight: 700; color: #4ecca3; }
-.receipt-meta { font-size: 12px; color: #888; margin-top: 4px; }
-.category-badge { background: rgba(233,69,96,0.15); color: #e94560; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.empty-state { text-align: center; padding: 40px 20px; color: #555; }
-.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.summary-card { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 14px; }
-.summary-card .cat { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
-.summary-card .amt { font-size: 20px; font-weight: 700; color: #4ecca3; }
-.summary-card .count { font-size: 11px; color: #666; margin-top: 2px; }
-.total-card { background: #e94560; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-.total-card .label { font-size: 13px; color: rgba(255,255,255,0.7); }
-.total-card .amount { font-size: 32px; font-weight: 800; color: white; }
-.total-card .sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; }
-.export-btn { width: 100%; background: #16213e; border: 1px solid #0f3460; color: #e8e8e8; border-radius: 8px; padding: 12px; font-size: 14px; cursor: pointer; margin-bottom: 8px; }
-.status-msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; display: none; }
-.status-msg.success { background: rgba(78,204,163,0.15); color: #4ecca3; border: 1px solid rgba(78,204,163,0.3); }
-.status-msg.error { background: rgba(233,69,96,0.15); color: #e94560; border: 1px solid rgba(233,69,96,0.3); }
-.year-filter { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-.year-btn { background: #16213e; border: 1px solid #0f3460; color: #888; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; }
-.year-btn.active { background: rgba(233,69,96,0.15); border-color: #e94560; color: #e94560; }
-.manual-entry { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-.manual-entry h3 { font-size: 14px; color: #e94560; margin-bottom: 12px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d0d0d; color: #f0f0f0; min-height: 100vh; overscroll-behavior: none; }
+  .app { max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+  
+  /* HEADER */
+  .header { background: #111; padding: 18px 16px 14px; border-bottom: 2px solid #e94560; position: sticky; top: 0; z-index: 10; }
+  .header-row { display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 24px; font-weight: 800; color: #e94560; letter-spacing: -1px; }
+  .header h1 span { color: #f0f0f0; }
+  .api-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .api-status.set { background: rgba(46,213,115,0.15); color: #2ed573; border: 1px solid #2ed573; }
+  .api-status.notset { background: rgba(233,69,96,0.15); color: #e94560; border: 1px solid #e94560; }
+
+  /* TABS */
+  .tabs { display: flex; background: #111; border-bottom: 1px solid #222; position: sticky; top: 62px; z-index: 9; }
+  .tab { flex: 1; padding: 11px 4px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; color: #555; border-bottom: 2px solid transparent; transition: all 0.2s; letter-spacing: 0.3px; text-transform: uppercase; }
+  .tab.active { color: #e94560; border-bottom-color: #e94560; }
+
+  /* SECTIONS */
+  .section { display: none; padding: 16px; }
+  .section.active { display: block; }
+
+  /* CARDS */
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 13px; font-weight: 700; color: #e94560; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+  /* INPUTS */
+  input, select, textarea { width: 100%; background: #0d0d0d; border: 1px solid #333; border-radius: 8px; padding: 11px 12px; color: #f0f0f0; font-size: 15px; font-family: inherit; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: #e94560; }
+  input::placeholder { color: #444; }
+  label { font-size: 12px; color: #888; font-weight: 600; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .field { margin-bottom: 12px; }
+
+  /* BUTTONS */
+  .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .btn-red { background: #e94560; color: white; }
+  .btn-red:active { background: #c73652; transform: scale(0.98); }
+  .btn-dark { background: #222; color: #f0f0f0; border: 1px solid #333; }
+  .btn-dark:active { background: #2a2a2a; }
+  .btn-sm { width: auto; padding: 7px 14px; font-size: 13px; border-radius: 8px; }
+
+  /* SCAN AREA */
+  .scan-zone { border: 2px dashed #333; border-radius: 12px; padding: 30px 16px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; position: relative; overflow: hidden; }
+  .scan-zone:active { border-color: #e94560; background: rgba(233,69,96,0.05); }
+  .scan-zone .icon { font-size: 48px; margin-bottom: 8px; }
+  .scan-zone p { color: #555; font-size: 14px; }
+  #cameraInput { display: none; }
+
+  /* RECEIPT PREVIEW */
+  #receiptPreview { width: 100%; border-radius: 8px; margin-bottom: 12px; display: none; max-height: 300px; object-fit: contain; background: #000; }
+
+  /* AI RESULT */
+  .ai-result { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px; margin-bottom: 12px; display: none; }
+  .ai-result h4 { color: #2ed573; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .result-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e1e1e; font-size: 14px; }
+  .result-row:last-child { border-bottom: none; }
+  .result-label { color: #888; }
+  .result-value { color: #f0f0f0; font-weight: 600; text-align: right; max-width: 60%; }
+
+  /* SPINNER */
+  .spinner { display: none; text-align: center; padding: 20px; color: #888; font-size: 14px; }
+  .spinner::before { content: ''; display: block; width: 32px; height: 32px; border: 3px solid #333; border-top-color: #e94560; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RECEIPTS LIST */
+  .receipt-item { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+  .receipt-item-header { display: flex; align-items: center; padding: 12px 14px; cursor: pointer; }
+  .receipt-thumb { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #111; flex-shrink: 0; margin-right: 12px; border: 1px solid #333; }
+  .receipt-thumb-placeholder { width: 48px; height: 48px; border-radius: 6px; background: #222; flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #333; }
+  .receipt-info { flex: 1; min-width: 0; }
+  .receipt-vendor { font-size: 14px; font-weight: 700; color: #f0f0f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .receipt-meta { font-size: 12px; color: #666; margin-top: 2px; }
+  .receipt-amount { font-size: 16px; font-weight: 800; color: #2ed573; flex-shrink: 0; margin-left: 8px; }
+  .receipt-detail { display: none; padding: 0 14px 14px; border-top: 1px solid #222; }
+  .receipt-detail.open { display: block; }
+  .receipt-full-img { width: 100%; border-radius: 8px; margin: 10px 0; max-height: 400px; object-fit: contain; background: #000; }
+  .receipt-detail-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #1e1e1e; }
+  .receipt-detail-row:last-child { border-bottom: none; }
+  .receipt-detail-label { color: #777; }
+  .receipt-detail-value { color: #f0f0f0; font-weight: 600; text-align: right; }
+  .btn-delete { background: rgba(233,69,96,0.1); color: #e94560; border: 1px solid #e94560; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+
+  /* SUMMARY */
+  .summary-stat { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .summary-stat-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .summary-stat-value { font-size: 28px; font-weight: 800; color: #2ed573; }
+  .summary-stat-sub { font-size: 12px; color: #555; margin-top: 2px; }
+  .cat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e1e1e; }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-name { font-size: 14px; color: #f0f0f0; }
+  .cat-count { font-size: 12px; color: #555; }
+  .cat-amount { font-size: 15px; font-weight: 700; color: #2ed573; }
+  .cat-bar-wrap { background: #111; border-radius: 4px; height: 4px; margin-top: 4px; flex-basis: 100%; }
+  .cat-bar { height: 4px; border-radius: 4px; background: #e94560; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-btn { flex: 1; padding: 8px; border: 1px solid #333; border-radius: 8px; background: #1a1a1a; color: #888; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; }
+  .filter-btn.active { background: #e94560; color: white; border-color: #e94560; }
+
+  /* SETTINGS */
+  .setting-group { margin-bottom: 16px; }
+  .setting-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 700; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 40px 20px; color: #444; }
+  .empty-icon { font-size: 48px; margin-bottom: 10px; }
+  .empty p { font-size: 14px; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 20px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-size: 16px; font-weight: 700; color: #e94560; margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-btns .btn { flex: 1; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #2ed573; color: #000; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 700; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="header">
-    <h1>TruckBooks</h1>
-    <p>Receipt & Log Tracker for Owner-Operators</p>
-    <span class="credits" id="creditDisplay">API Key Not Set</span>
+    <div class="header-row">
+      <h1>Truck<span>Books</span></h1>
+      <div class="api-status notset" id="apiStatus">NO API KEY</div>
+    </div>
   </div>
+
   <div class="tabs">
-    <div class="tab active" onclick="showTab('scan', this)">Scan</div>
-    <div class="tab" onclick="showTab('records', this)">Records</div>
-    <div class="tab" onclick="showTab('summary', this)">Tax Summary</div>
-    <div class="tab" onclick="showTab('settings', this)">Settings</div>
+    <div class="tab active" onclick="switchTab('scan')">📷 Scan</div>
+    <div class="tab" onclick="switchTab('receipts')">🧾 Receipts</div>
+    <div class="tab" onclick="switchTab('summary')">📊 Summary</div>
+    <div class="tab" onclick="switchTab('settings')">⚙️ Settings</div>
   </div>
 
-  <div id="tab-scan" class="section active">
-    <div id="statusMsg" class="status-msg"></div>
-
-    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-      <div class="upload-icon">📷</div>
-      <h3>Snap or Upload Receipt</h3>
-      <p>Tap to take a photo or choose from camera roll</p>
-      <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFile(this)">
-    </div>
-
-    <div class="preview-area" id="previewArea">
-      <img id="previewImg" src="" alt="Receipt preview">
-      <button class="btn-scan" id="scanBtn" onclick="scanReceipt()">Scan with AI</button>
-    </div>
-
-    <div class="loading" id="loadingArea">
-      <div class="spinner"></div>
-      <p>Reading your receipt... (10-20 seconds)</p>
-    </div>
-
-    <div class="result-card" id="resultCard">
-      <h3>Check Details & Save</h3>
-      <div class="result-row">
-        <span class="result-label">Vendor</span>
-        <input class="edit-field" id="res-vendor" type="text">
+  <!-- SCAN TAB -->
+  <div class="section active" id="tab-scan">
+    <div class="card">
+      <div class="card-title">📷 Scan a Receipt</div>
+      <div class="scan-zone" onclick="document.getElementById('cameraInput').click()">
+        <div class="icon">📸</div>
+        <p>Tap to take a photo or choose from library</p>
       </div>
-      <div class="result-row">
-        <span class="result-label">Date</span>
-        <input class="edit-field" id="res-date" type="date">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+      <img id="receiptPreview" alt="Receipt preview">
+      <div class="spinner" id="spinner">Reading receipt with AI...</div>
+      <div class="ai-result" id="aiResult">
+        <h4>✅ AI Read This Receipt</h4>
+        <div id="aiResultRows"></div>
       </div>
-      <div class="result-row">
-        <span class="result-label">Amount ($)</span>
-        <input class="edit-field" id="res-amount" type="number" step="0.01" placeholder="0.00">
-      </div>
-      <div class="result-row">
-        <span class="result-label">Category</span>
-        <select class="edit-field" id="res-category">
-          <option>Fuel</option>
-          <option>Repairs & Maintenance</option>
-          <option>Tolls</option>
-          <option>Meals (80% deductible)</option>
-          <option>Truck Wash</option>
-          <option>Permits & Licenses</option>
-          <option>Insurance</option>
-          <option>Scales / Weigh Stations</option>
-          <option>Office / Admin</option>
-          <option>Parking</option>
-          <option>Other Business</option>
-        </select>
-      </div>
-      <div class="result-row">
-        <span class="result-label">Notes</span>
-        <input class="edit-field" id="res-notes" type="text" placeholder="Optional">
-      </div>
-      <button class="btn-save-receipt" onclick="saveReceipt()">Save Receipt</button>
-    </div>
-
-    <div class="manual-entry">
-      <h3>Or Enter Manually</h3>
-      <div class="result-row">
-        <span class="result-label">Vendor</span>
-        <input class="edit-field" id="man-vendor" type="text" placeholder="Store name">
-      </div>
-      <div class="result-row">
-        <span class="result-label">Date</span>
-        <input class="edit-field" id="man-date" type="date">
-      </div>
-      <div class="result-row">
-        <span class="result-label">Amount ($)</span>
-        <input class="edit-field" id="man-amount" type="number" step="0.01" placeholder="0.00">
-      </div>
-      <div class="result-row">
-        <span class="result-label">Category</span>
-        <select class="edit-field" id="man-category">
-          <option>Fuel</option>
-          <option>Repairs & Maintenance</option>
-          <option>Tolls</option>
-          <option>Meals (80% deductible)</option>
-          <option>Truck Wash</option>
-          <option>Permits & Licenses</option>
-          <option>Insurance</option>
-          <option>Scales / Weigh Stations</option>
-          <option>Office / Admin</option>
-          <option>Parking</option>
-          <option>Other Business</option>
-        </select>
-      </div>
-      <div class="result-row">
-        <span class="result-label">Notes</span>
-        <input class="edit-field" id="man-notes" type="text" placeholder="Optional">
-      </div>
-      <button class="btn-save-receipt" onclick="saveManual()">Save Receipt</button>
+      <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save This Receipt</button>
     </div>
   </div>
 
-  <div id="tab-records" class="section">
-    <div class="year-filter" id="yearFilter"></div>
+  <!-- RECEIPTS TAB -->
+  <div class="section" id="tab-receipts">
     <div id="receiptsList"></div>
   </div>
 
-  <div id="tab-summary" class="section">
-    <div class="year-filter" id="summaryYearFilter"></div>
-    <div class="total-card">
-      <div class="label">Total Deductions</div>
-      <div class="amount" id="summaryTotal">$0.00</div>
-      <div class="sub" id="summaryCount">0 receipts saved</div>
+  <!-- SUMMARY TAB -->
+  <div class="section" id="tab-summary">
+    <div class="filter-row">
+      <div class="filter-btn active" onclick="setFilter('all',this)">All Time</div>
+      <div class="filter-btn" onclick="setFilter('year',this)">This Year</div>
+      <div class="filter-btn" onclick="setFilter('month',this)">This Month</div>
     </div>
-    <div class="summary-grid" id="summaryGrid"></div>
-    <button class="export-btn" onclick="exportCSV()">Export to CSV (for your accountant)</button>
+    <div id="summaryContent"></div>
   </div>
 
-  <div id="tab-settings" class="section">
-    <div class="api-setup">
-      <h3>Anthropic API Key</h3>
-      <p style="font-size:12px; color:#888; margin-bottom:10px;">Stays on your device only. Never shared.</p>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
-      <button class="btn-save" onclick="saveApiKey()">Save API Key</button>
+  <!-- SETTINGS TAB -->
+  <div class="section" id="tab-settings">
+    <div class="card">
+      <div class="card-title">🔑 Anthropic API Key</div>
+      <div class="field">
+        <label>Your API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+      </div>
+      <button class="btn btn-red" onclick="saveApiKey()">Save API Key</button>
     </div>
-    <div class="api-setup" style="margin-top:12px;">
-      <h3>Data</h3>
-      <p style="font-size:12px; color:#888; margin-bottom:10px;">All receipts stored on this device.</p>
-      <button class="export-btn" onclick="exportCSV()">Export All Data (CSV)</button>
-      <button class="export-btn" style="color:#e94560; border-color:#e94560;" onclick="clearData()">Clear All Data</button>
+    <div class="card">
+      <div class="card-title">📋 About TruckBooks</div>
+      <p style="font-size:13px;color:#666;line-height:1.6">TruckBooks stores your receipts and photos directly on your phone. Everything you need for an IRS audit — in one place. No internet required to view saved receipts.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🗑️ Data</div>
+      <button class="btn btn-dark" onclick="clearAll()">Clear All Receipts</button>
     </div>
   </div>
 </div>
 
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete This Receipt?</h3>
+    <p style="color:#888;font-size:14px">This will permanently remove the receipt and its photo.</p>
+    <div class="modal-btns">
+      <button class="btn btn-dark" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-red" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-let receipts = JSON.parse(localStorage.getItem('truckbooks_receipts') || '[]');
-let apiKey = localStorage.getItem('truckbooks_apikey') || '';
-let currentImageBase64 = '';
-let currentImageType = 'image/jpeg';
-let selectedYear = new Date().getFullYear();
+// ── STATE ──
+let currentPhotoData = null; // base64 of current scanned photo
+let currentResult = null;    // AI parsed result
+let deleteTargetId = null;
+let activeFilter = 'all';
 
-if(apiKey) {
-  document.getElementById('apiKeyInput').value = apiKey;
-  document.getElementById('creditDisplay').textContent = 'API Key Set';
-}
+const CATEGORIES = [
+  'Fuel', 'Truck Maintenance', 'Truck Payment', 'Insurance',
+  'Permits & Licensing', 'Tolls', 'Meals', 'Hotel/Lodging',
+  'Office/Admin', 'Phone', 'Scales/Weigh Stations', 'Other'
+];
 
-// Set today's date on manual entry
-document.getElementById('man-date').value = new Date().toISOString().split('T')[0];
+// ── INIT ──
+window.onload = () => {
+  loadApiKey();
+  renderReceipts();
+  renderSummary();
+};
 
-function showTab(name, el) {
+// ── TABS ──
+function switchTab(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  el.classList.add('active');
-  if(name === 'records') renderRecords();
-  if(name === 'summary') renderSummary();
+  event.target.classList.add('active');
+  if (name === 'receipts') renderReceipts();
+  if (name === 'summary') renderSummary();
 }
 
+// ── API KEY ──
+function loadApiKey() {
+  const key = localStorage.getItem('tb_apikey');
+  if (key) {
+    document.getElementById('apiKeyInput').value = key;
+    document.getElementById('apiStatus').textContent = 'API KEY SET';
+    document.getElementById('apiStatus').className = 'api-status set';
+  }
+}
 function saveApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
-  if(!key || key.length < 20) { showStatus('Please enter your full API key', 'error'); return; }
-  localStorage.setItem('truckbooks_apikey', key);
-  apiKey = key;
-  document.getElementById('creditDisplay').textContent = 'API Key Set';
-  showStatus('API key saved!', 'success');
+  if (!key) return showToast('Enter your API key first');
+  localStorage.setItem('tb_apikey', key);
+  document.getElementById('apiStatus').textContent = 'API KEY SET';
+  document.getElementById('apiStatus').className = 'api-status set';
+  showToast('API Key saved!');
 }
 
-function showStatus(msg, type) {
-  const el = document.getElementById('statusMsg');
-  el.textContent = msg; el.className = 'status-msg ' + type; el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 5000);
-}
-
-function handleFile(input) {
-  const file = input.files[0]; if(!file) return;
-  currentImageType = file.type || 'image/jpeg';
+// ── PHOTO HANDLING ──
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
-    currentImageBase64 = e.target.result.split(',')[1];
-    document.getElementById('previewImg').src = e.target.result;
-    document.getElementById('previewArea').style.display = 'block';
-    document.getElementById('resultCard').style.display = 'none';
+  reader.onload = e => {
+    currentPhotoData = e.target.result; // full base64 with data: prefix
+    const img = document.getElementById('receiptPreview');
+    img.src = currentPhotoData;
+    img.style.display = 'block';
+    document.getElementById('aiResult').style.display = 'none';
+    document.getElementById('saveBtn').style.display = 'none';
+    scanWithAI(file);
   };
   reader.readAsDataURL(file);
+  input.value = '';
 }
 
-async function scanReceipt() {
-  if(!apiKey) { showStatus('Set your API key in Settings first', 'error'); return; }
-  if(!currentImageBase64) { showStatus('Please select an image first', 'error'); return; }
-  
-  document.getElementById('loadingArea').style.display = 'block';
-  document.getElementById('scanBtn').disabled = true;
-  document.getElementById('resultCard').style.display = 'none';
+// ── AI SCAN ──
+async function scanWithAI(file) {
+  const apiKey = localStorage.getItem('tb_apikey');
+  if (!apiKey) { showToast('Set your API key in Settings first'); return; }
+
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('aiResult').style.display = 'none';
+  document.getElementById('saveBtn').style.display = 'none';
+
+  // Compress image
+  const base64 = await compressImage(file, 800, 0.7);
+  const pureBase64 = base64.split(',')[1];
+
+  const prompt = `You are reading a receipt for a truck driver's expense records. Extract this information and respond ONLY with valid JSON, nothing else:
+{
+  "vendor": "store or business name",
+  "date": "date on receipt MM/DD/YYYY or today if not visible",
+  "amount": "total amount as number only like 45.23",
+  "category": "one of: Fuel, Truck Maintenance, Truck Payment, Insurance, Permits & Licensing, Tolls, Meals, Hotel/Lodging, Office/Admin, Phone, Scales/Weigh Stations, Other",
+  "notes": "brief description of what was purchased"
+}`;
 
   try {
-    const mediaType = currentImageType.startsWith('image/') ? currentImageType : 'image/jpeg';
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    const finalType = validTypes.includes(mediaType) ? mediaType : 'image/jpeg';
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -287,122 +308,237 @@ async function scanReceipt() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-opus-4-5',
         max_tokens: 500,
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: finalType, data: currentImageBase64 } },
-            { type: 'text', text: 'Read this receipt. Return ONLY this JSON, nothing else: {"vendor":"name","date":"YYYY-MM-DD","amount":0.00,"category":"Fuel","notes":""}. For category use one of: Fuel, Repairs & Maintenance, Tolls, Meals (80% deductible), Truck Wash, Permits & Licenses, Insurance, Scales / Weigh Stations, Office / Admin, Parking, Other Business. Use today date ' + new Date().toISOString().split('T')[0] + ' if date not visible.' }
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: pureBase64 }},
+            { type: 'text', text: prompt }
           ]
         }]
       })
     });
 
-    if(!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || 'API error ' + response.status);
-    }
+    const data = await resp.json();
+    const text = data.content[0].text.trim();
+    const clean = text.replace(/```json|```/g, '').trim();
+    currentResult = JSON.parse(clean);
 
-    const data = await response.json();
-    const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if(!jsonMatch) throw new Error('Could not read receipt. Try again.');
-    const result = JSON.parse(jsonMatch[0]);
-
-    document.getElementById('res-vendor').value = result.vendor || '';
-    document.getElementById('res-date').value = result.date || new Date().toISOString().split('T')[0];
-    document.getElementById('res-amount').value = result.amount || '';
-    const cat = document.getElementById('res-category');
-    for(let o of cat.options) { if(o.value === result.category) { cat.value = result.category; break; } }
-    document.getElementById('res-notes').value = result.notes || '';
-    document.getElementById('resultCard').style.display = 'block';
-
+    // Show result
+    const rows = document.getElementById('aiResultRows');
+    rows.innerHTML = `
+      <div class="result-row"><span class="result-label">Vendor</span><span class="result-value">${currentResult.vendor}</span></div>
+      <div class="result-row"><span class="result-label">Date</span><span class="result-value">${currentResult.date}</span></div>
+      <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$${parseFloat(currentResult.amount).toFixed(2)}</span></div>
+      <div class="result-row"><span class="result-label">Category</span><span class="result-value">${currentResult.category}</span></div>
+      <div class="result-row"><span class="result-label">Notes</span><span class="result-value">${currentResult.notes}</span></div>
+    `;
+    document.getElementById('aiResult').style.display = 'block';
+    document.getElementById('saveBtn').style.display = 'block';
   } catch(err) {
-    showStatus('Error: ' + err.message, 'error');
+    showToast('Error reading receipt. Try again.');
+    console.error(err);
   }
-
-  document.getElementById('loadingArea').style.display = 'none';
-  document.getElementById('scanBtn').disabled = false;
+  document.getElementById('spinner').style.display = 'none';
 }
 
+// ── COMPRESS IMAGE ──
+function compressImage(file, maxSize, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+      else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  });
+}
+
+// ── SAVE RECEIPT ──
 function saveReceipt() {
-  const amount = parseFloat(document.getElementById('res-amount').value);
-  if(!document.getElementById('res-vendor').value) { showStatus('Please enter a vendor name', 'error'); return; }
-  if(!amount) { showStatus('Please enter an amount', 'error'); return; }
+  if (!currentResult || !currentPhotoData) return;
+  const receipts = getReceipts();
+  const receipt = {
+    id: Date.now().toString(),
+    vendor: currentResult.vendor,
+    date: currentResult.date,
+    amount: parseFloat(currentResult.amount),
+    category: currentResult.category,
+    notes: currentResult.notes,
+    photo: currentPhotoData,  // ← THE ACTUAL PHOTO STORED HERE
+    savedAt: new Date().toISOString()
+  };
+  receipts.unshift(receipt);
+  saveReceipts(receipts);
   
-  const receipt = {
-    id: Date.now(),
-    vendor: document.getElementById('res-vendor').value,
-    date: document.getElementById('res-date').value,
-    amount: amount,
-    category: document.getElementById('res-category').value,
-    notes: document.getElementById('res-notes').value,
-    savedAt: new Date().toISOString()
-  };
-  receipts.unshift(receipt);
-  localStorage.setItem('truckbooks_receipts', JSON.stringify(receipts));
-  document.getElementById('resultCard').style.display = 'none';
-  document.getElementById('previewArea').style.display = 'none';
-  document.getElementById('fileInput').value = '';
-  currentImageBase64 = '';
-  showStatus('Saved! $' + receipt.amount.toFixed(2) + ' — ' + receipt.category, 'success');
+  // Reset scan tab
+  currentPhotoData = null;
+  currentResult = null;
+  document.getElementById('receiptPreview').style.display = 'none';
+  document.getElementById('aiResult').style.display = 'none';
+  document.getElementById('saveBtn').style.display = 'none';
+  showToast('Receipt saved! ✅');
 }
 
-function saveManual() {
-  const vendor = document.getElementById('man-vendor').value;
-  const amount = parseFloat(document.getElementById('man-amount').value);
-  if(!vendor) { showStatus('Please enter a vendor name', 'error'); return; }
-  if(!amount) { showStatus('Please enter an amount', 'error'); return; }
-  const receipt = {
-    id: Date.now(),
-    vendor: vendor,
-    date: document.getElementById('man-date').value,
-    amount: amount,
-    category: document.getElementById('man-category').value,
-    notes: document.getElementById('man-notes').value,
-    savedAt: new Date().toISOString()
-  };
-  receipts.unshift(receipt);
-  localStorage.setItem('truckbooks_receipts', JSON.stringify(receipts));
-  document.getElementById('man-vendor').value = '';
-  document.getElementById('man-amount').value = '';
-  document.getElementById('man-notes').value = '';
-  showStatus('Saved! $' + receipt.amount.toFixed(2) + ' — ' + receipt.category, 'success');
+// ── RECEIPTS STORAGE ──
+function getReceipts() {
+  try { return JSON.parse(localStorage.getItem('tb_receipts') || '[]'); } catch { return []; }
+}
+function saveReceipts(r) { localStorage.setItem('tb_receipts', JSON.stringify(r)); }
+
+// ── RENDER RECEIPTS ──
+function renderReceipts() {
+  const receipts = getReceipts();
+  const el = document.getElementById('receiptsList');
+  if (!receipts.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><p>No receipts yet.<br>Scan your first receipt!</p></div>';
+    return;
+  }
+  el.innerHTML = receipts.map(r => `
+    <div class="receipt-item" id="item-${r.id}">
+      <div class="receipt-item-header" onclick="toggleDetail('${r.id}')">
+        ${r.photo
+          ? `<img class="receipt-thumb" src="${r.photo}" alt="receipt">`
+          : `<div class="receipt-thumb-placeholder">🧾</div>`}
+        <div class="receipt-info">
+          <div class="receipt-vendor">${r.vendor}</div>
+          <div class="receipt-meta">${r.date} · ${r.category}</div>
+        </div>
+        <div class="receipt-amount">$${r.amount.toFixed(2)}</div>
+      </div>
+      <div class="receipt-detail" id="detail-${r.id}">
+        ${r.photo ? `<img class="receipt-full-img" src="${r.photo}" alt="Full receipt">` : ''}
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Vendor</span><span class="receipt-detail-value">${r.vendor}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Date</span><span class="receipt-detail-value">${r.date}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Amount</span><span class="receipt-detail-value">$${r.amount.toFixed(2)}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Category</span><span class="receipt-detail-value">${r.category}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Notes</span><span class="receipt-detail-value">${r.notes}</span></div>
+        <button class="btn-delete" onclick="deleteReceipt('${r.id}')">🗑️ Delete</button>
+      </div>
+    </div>
+  `).join('');
 }
 
-function renderRecords() {
-  const years = [...new Set(receipts.map(r => r.date.substring(0,4)))].sort().reverse();
-  if(!years.includes(String(selectedYear))) selectedYear = years[0] || new Date().getFullYear();
-  document.getElementById('yearFilter').innerHTML = years.map(y => `<button class="year-btn ${y==selectedYear?'active':''}" onclick="selectedYear='${y}';renderRecords()">${y}</button>`).join('');
-  const filtered = receipts.filter(r => r.date.startsWith(String(selectedYear)));
-  const list = document.getElementById('receiptsList');
-  if(!filtered.length) { list.innerHTML = '<div class="empty-state"><p>No receipts for ' + selectedYear + '</p></div>'; return; }
-  list.innerHTML = filtered.map(r => `<div class="receipt-item"><div class="receipt-top"><div><div class="receipt-vendor">${r.vendor}</div><div class="receipt-meta">${r.date} &bull; <span class="category-badge">${r.category}</span></div>${r.notes?'<div class="receipt-meta">'+r.notes+'</div>':''}</div><div class="receipt-amount">$${r.amount.toFixed(2)}</div></div></div>`).join('');
+function toggleDetail(id) {
+  const el = document.getElementById('detail-' + id);
+  el.classList.toggle('open');
+}
+
+// ── DELETE ──
+function deleteReceipt(id) {
+  deleteTargetId = id;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  deleteTargetId = null;
+}
+function confirmDelete() {
+  if (!deleteTargetId) return;
+  const receipts = getReceipts().filter(r => r.id !== deleteTargetId);
+  saveReceipts(receipts);
+  closeModal();
+  renderReceipts();
+  showToast('Receipt deleted');
+}
+
+// ── SUMMARY ──
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSummary();
 }
 
 function renderSummary() {
-  const years = [...new Set(receipts.map(r => r.date.substring(0,4)))].sort().reverse();
-  if(!years.includes(String(selectedYear))) selectedYear = years[0] || new Date().getFullYear();
-  document.getElementById('summaryYearFilter').innerHTML = years.map(y => `<button class="year-btn ${y==selectedYear?'active':''}" onclick="selectedYear='${y}';renderSummary()">${y}</button>`).join('');
-  const filtered = receipts.filter(r => r.date.startsWith(String(selectedYear)));
-  const total = filtered.reduce((s,r) => s + r.amount, 0);
-  document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
-  document.getElementById('summaryCount').textContent = filtered.length + ' receipts • Tax Year ' + selectedYear;
+  const all = getReceipts();
+  const now = new Date();
+  
+  const filtered = all.filter(r => {
+    if (activeFilter === 'all') return true;
+    const d = new Date(r.savedAt);
+    if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
+    if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return true;
+  });
+
+  const total = filtered.reduce((s, r) => s + r.amount, 0);
+  const count = filtered.length;
+
+  // Category breakdown
   const cats = {};
-  filtered.forEach(r => { if(!cats[r.category]) cats[r.category]={total:0,count:0}; cats[r.category].total+=r.amount; cats[r.category].count++; });
-  document.getElementById('summaryGrid').innerHTML = Object.entries(cats).sort((a,b)=>b[1].total-a[1].total).map(([cat,data])=>`<div class="summary-card"><div class="cat">${cat}</div><div class="amt">$${data.total.toFixed(2)}</div><div class="count">${data.count} receipt${data.count!==1?'s':''}</div></div>`).join('');
+  filtered.forEach(r => {
+    cats[r.category] = (cats[r.category] || 0) + r.amount;
+  });
+  const sortedCats = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+  const maxCat = sortedCats[0] ? sortedCats[0][1] : 1;
+
+  const el = document.getElementById('summaryContent');
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>No receipts for this period</p></div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div class="summary-stat" style="flex:1">
+        <div class="summary-stat-label">Total Expenses</div>
+        <div class="summary-stat-value">$${total.toFixed(2)}</div>
+        <div class="summary-stat-sub">${count} receipt${count !== 1 ? 's' : ''}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">By Category</div>
+      ${sortedCats.map(([cat, amt]) => {
+        const pct = Math.round((amt / total) * 100);
+        const catCount = filtered.filter(r => r.category === cat).length;
+        return `
+          <div class="cat-row" style="flex-wrap:wrap">
+            <div style="flex:1">
+              <div class="cat-name">${cat}</div>
+              <div class="cat-count">${catCount} receipt${catCount !== 1 ? 's' : ''} · ${pct}%</div>
+              <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%"></div></div>
+            </div>
+            <div class="cat-amount" style="margin-left:12px">$${amt.toFixed(2)}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">📋 Audit Summary</div>
+      <p style="font-size:13px;color:#666;line-height:1.7">
+        Total documented expenses: <strong style="color:#2ed573">$${total.toFixed(2)}</strong><br>
+        Total receipts on file: <strong style="color:#f0f0f0">${count}</strong><br>
+        Top category: <strong style="color:#f0f0f0">${sortedCats[0] ? sortedCats[0][0] : 'N/A'}</strong>
+      </p>
+    </div>
+  `;
 }
 
-function exportCSV() {
-  if(!receipts.length) { alert('No receipts to export yet.'); return; }
-  const rows = receipts.map(r => `"${r.date}","${r.vendor}","${r.amount.toFixed(2)}","${r.category}","${r.notes||''}","${r.savedAt}"`);
-  const blob = new Blob(['Date,Vendor,Amount,Category,Notes,Saved At\n' + rows.join('\n')], {type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'TruckBooks_' + selectedYear + '.csv'; a.click();
+// ── CLEAR ALL ──
+function clearAll() {
+  if (!confirm('Delete ALL receipts and photos? This cannot be undone.')) return;
+  localStorage.removeItem('tb_receipts');
+  renderReceipts();
+  renderSummary();
+  showToast('All receipts cleared');
 }
 
-function clearData() {
-  if(confirm('Delete ALL receipts? Cannot be undone.')) { receipts = []; localStorage.setItem('truckbooks_receipts','[]'); renderRecords(); }
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 </script>
 </body>
