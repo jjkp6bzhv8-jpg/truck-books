@@ -1572,7 +1572,15 @@ function filteredReceipts() {
   const now = new Date();
   return receipts.filter(r => {
     if (activeFilter === 'all') return true;
-    const d = new Date(r.savedAt);
+    // Use the actual receipt date (MM/DD/YYYY), fall back to savedAt
+    const dateStr = r.date ? r.date : null;
+    let d;
+    if (dateStr && dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      d = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+    } else {
+      d = new Date(r.savedAt);
+    }
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     return true;
@@ -1582,7 +1590,15 @@ function filteredSettlements() {
   const now = new Date();
   return settlements.filter(s => {
     if (activeFilter === 'all') return true;
-    const d = new Date(s.savedAt);
+    // Use the actual settlement date (MM/DD/YYYY), fall back to savedAt
+    const dateStr = s.date ? s.date : null;
+    let d;
+    if (dateStr && dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      d = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+    } else {
+      d = new Date(s.savedAt);
+    }
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     return true;
