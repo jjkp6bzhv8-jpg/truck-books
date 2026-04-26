@@ -261,8 +261,8 @@
             From Library
           </div>
         </div>
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
-        <input type="file" id="libraryInput" accept="image/*" onchange="handlePhoto(this)">
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)" style="display:none">
+        <input type="file" id="libraryInput" accept="image/*" onchange="handlePhoto(this)" style="display:none">
         <img id="receiptPreview" alt="Receipt preview">
         <div class="spinner" id="spinner">Reading receipt with AI...</div>
         <div class="ai-result" id="aiResult">
@@ -307,8 +307,8 @@
             From Library
           </div>
         </div>
-        <input type="file" id="settlementCameraInput" accept="image/*" capture="environment" onchange="handleSettlementPhoto(this)">
-        <input type="file" id="settlementLibraryInput" accept="image/*" onchange="handleSettlementPhoto(this)">
+        <input type="file" id="settlementCameraInput" accept="image/*" capture="environment" onchange="handleSettlementPhoto(this)" style="display:none">
+        <input type="file" id="settlementLibraryInput" accept="image/*" onchange="handleSettlementPhoto(this)" style="display:none">
         <img id="settlementPreview" alt="Settlement preview" style="width:100%;border-radius:8px;margin-bottom:12px;display:none;max-height:300px;object-fit:contain;background:#000;">
         <button class="btn btn-dark" id="settlementRetakeBtn" onclick="retakeSettlementPhoto()" style="display:none;margin-bottom:12px">🔄 Retake / Choose Again</button>
         <div class="spinner" id="settlementSpinner">AI reading settlement sheet...</div>
@@ -370,8 +370,8 @@
             From Library
           </div>
         </div>
-        <input type="file" id="eldCameraInput" accept="image/*" capture="environment" onchange="handleEldPhoto(this)">
-        <input type="file" id="eldLibraryInput" accept="image/*" onchange="handleEldPhoto(this)">
+        <input type="file" id="eldCameraInput" accept="image/*" capture="environment" onchange="handleEldPhoto(this)" style="display:none">
+        <input type="file" id="eldLibraryInput" accept="image/*" onchange="handleEldPhoto(this)" style="display:none">
         <img id="eldPreview" alt="ELD log preview" style="width:100%;border-radius:8px;margin-bottom:12px;display:none;max-height:300px;object-fit:contain;background:#000;">
         <button class="btn btn-dark" id="eldRetakeBtn" onclick="retakeEldPhoto()" style="display:none;margin-bottom:12px">🔄 Retake Photo</button>
         <div class="spinner" id="eldSpinner">AI reading your log...</div>
@@ -1016,25 +1016,24 @@ function renderEld() {
     return;
   }
 
-  el.innerHTML = yearLogs.map(l => `
-    <div class="eld-log-item">
-      <div class="eld-log-header" onclick="toggleEld('ed${l.id}')">
-        <div class="eld-log-badge ${l.awayFromHome?'away':'home'}">${l.awayFromHome?'🚛':'🏠'}</div>
-        <div class="eld-log-info">
-          <div class="eld-log-date">${l.date}</div>
-          <div class="eld-log-meta">${l.miles ? l.miles + ' miles' : 'Miles not recorded'}</div>
-        </div>
-        <div class="eld-log-status ${l.awayFromHome?'away':'home'}">${l.awayFromHome?'AWAY':'HOME'}</div>
-      </div>
-      <div class="eld-log-detail" id="ed${l.id}">
-        ${l.photoThumb ? `<img class="receipt-full-img" src="${l.photoThumb}">` : ''}
-        ${l.photoFileId ? `<a href="https://drive.google.com/file/d/${l.photoFileId}/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>` : ''}
-        <div class="receipt-detail-row"><span class="receipt-detail-label">Date</span><span class="receipt-detail-value">${l.date}</span></div>
-        <div class="receipt-detail-row"><span class="receipt-detail-label">Miles</span><span class="receipt-detail-value">${l.miles || '—'}</span></div>
-        <div class="receipt-detail-row"><span class="receipt-detail-label">Per Diem Qualifying</span><span class="receipt-detail-value">${l.awayFromHome ? '✅ Yes' : '❌ No'}</span></div>
-        <button class="btn-delete" onclick="delEldLog('${l.id}','${l.photoFileId||''}')">🗑️ Delete</button>
-      </div>
-    </div>`).join('');
+  el.innerHTML = yearLogs.map(function(l) {
+    const photoImg = l.photoThumb ? '<img class="receipt-full-img" src="' + l.photoThumb + '">' : '';
+    const photoLink = l.photoFileId ? '<a href="https://drive.google.com/file/d/' + l.photoFileId + '/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>' : '';
+    return '<div class="eld-log-item">'
+      + '<div class="eld-log-header" onclick="toggleEld(\'ed' + l.id + '\')">'
+      + '<div class="eld-log-badge ' + (l.awayFromHome?'away':'home') + '">' + (l.awayFromHome?'🚛':'🏠') + '</div>'
+      + '<div class="eld-log-info"><div class="eld-log-date">' + l.date + '</div>'
+      + '<div class="eld-log-meta">' + (l.miles ? l.miles + ' miles' : 'Miles not recorded') + '</div></div>'
+      + '<div class="eld-log-status ' + (l.awayFromHome?'away':'home') + '">' + (l.awayFromHome?'AWAY':'HOME') + '</div>'
+      + '</div>'
+      + '<div class="eld-log-detail" id="ed' + l.id + '">'
+      + photoImg + photoLink
+      + '<div class="receipt-detail-row"><span class="receipt-detail-label">Date</span><span class="receipt-detail-value">' + l.date + '</span></div>'
+      + '<div class="receipt-detail-row"><span class="receipt-detail-label">Miles</span><span class="receipt-detail-value">' + (l.miles || '—') + '</span></div>'
+      + '<div class="receipt-detail-row"><span class="receipt-detail-label">Per Diem Qualifying</span><span class="receipt-detail-value">' + (l.awayFromHome ? '✅ Yes' : '❌ No') + '</span></div>'
+      + '<button class="btn-delete" onclick="delEldLog(\'' + l.id + '\',\'' + (l.photoFileId||'') + '\')">🗑️ Delete</button>'
+      + '</div></div>';
+  }).join('');
 }
 
 function selectEldYear(year, el) {
