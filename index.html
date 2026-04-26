@@ -202,8 +202,7 @@
   <div class="drawer" id="drawer">
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
     <div class="drawer-title">Navigation</div>
-    <div class="drawer-item active" id="d-scan" onclick="switchTab('scan','nav-scan');closeDrawer()"><span class="d-icon">📷</span> Scan Receipt</div>
-    <div class="drawer-item" id="d-receipts" onclick="switchTab('receipts','nav-receipts');closeDrawer()"><span class="d-icon">🧾</span> Receipts</div>
+    <div class="drawer-item active" id="d-receipts" onclick="switchTab('receipts','nav-receipts');closeDrawer()"><span class="d-icon">🧾</span> Receipts</div>
     <div class="drawer-item" id="d-pl" onclick="switchTab('pl','nav-pl');closeDrawer()"><span class="d-icon">📊</span> P&L</div>
     <div class="drawer-item" id="d-eld" onclick="switchTab('eld','nav-eld');closeDrawer()"><span class="d-icon">📋</span> ELD Logs</div>
     <div class="drawer-item" id="d-settlements" onclick="switchTab('settlements','nav-settlements');closeDrawer()"><span class="d-icon">📄</span> Settlements</div>
@@ -212,11 +211,7 @@
   </div>
 
   <div class="bottom-nav">
-    <div class="nav-item active" id="nav-scan" onclick="switchTab('scan','nav-scan')">
-      <div class="nav-icon">📷</div>
-      <div class="nav-label">Scan</div>
-    </div>
-    <div class="nav-item" id="nav-receipts" onclick="switchTab('receipts','nav-receipts')">
+    <div class="nav-item active" id="nav-receipts" onclick="switchTab('receipts','nav-receipts')">
       <div class="nav-icon">🧾</div>
       <div class="nav-label">Receipts</div>
     </div>
@@ -234,8 +229,8 @@
     </div>
   </div>
 
-  <!-- SCAN TAB -->
-  <div class="section active" id="tab-scan">
+  <!-- RECEIPTS TAB -->
+  <div class="section active" id="tab-receipts">
     <div id="signInPrompt">
       <div class="sign-in-screen">
         <div style="font-size:64px;margin-bottom:16px">📋</div>
@@ -276,12 +271,8 @@
         </div>
         <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save to Google Drive</button>
       </div>
+      <div id="receiptsList"></div>
     </div>
-  </div>
-
-  <!-- RECEIPTS TAB -->
-  <div class="section" id="tab-receipts">
-    <div id="receiptsList"></div>
   </div>
 
   <!-- P&L TAB -->
@@ -589,6 +580,7 @@ function showSignedIn() {
   document.getElementById('eldContent').style.display = 'block';
   document.getElementById('settlementsSignInPrompt').style.display = 'none';
   document.getElementById('settlementsContent').style.display = 'block';
+  renderReceipts();
 }
 
 function showSignedOut() {
@@ -600,8 +592,8 @@ function showSignedOut() {
   document.getElementById('scanContent').style.display = 'none';
   document.getElementById('eldSignInPrompt').style.display = 'block';
   document.getElementById('eldContent').style.display = 'none';
-  document.getElementById('receiptsList').innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><p>Sign in with Google in Settings to view your receipts.</p></div>';
-  document.getElementById('summaryContent').innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><p>Sign in with Google to see your summary.</p></div>';
+  document.getElementById('settlementsSignInPrompt').style.display = 'block';
+  document.getElementById('settlementsContent').style.display = 'none';
 }
 
 // ── DRIVE FOLDER ──
