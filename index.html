@@ -552,12 +552,12 @@ function delReceipt(id, fid) { deleteId = id; deleteFileId = fid; document.getEl
 function closeModal() { document.getElementById('deleteModal').classList.remove('open'); deleteId = null; deleteFileId = null; }
 async function confirmDelete() {
   if (!deleteId) return;
-  closeModal(); showLoading('Removing receipt...');
-  try {
-    receipts = receipts.filter(r => r.id !== deleteId);
-    await saveIndex();
-    renderReceipts(); renderSummary(); hideLoading(); showToast('Receipt deleted');
-  } catch(e) { hideLoading(); showToast('Delete failed'); }
+  const idToDelete = deleteId;
+  closeModal();
+  receipts = receipts.filter(r => r.id !== idToDelete);
+  renderReceipts(); renderSummary();
+  showToast('Receipt deleted');
+  try { await saveIndex(); } catch(e) { console.error('Save failed', e); }
 }
 
 async function clearAll() {
