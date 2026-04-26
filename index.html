@@ -1136,7 +1136,7 @@ async function scanSettlementWithAI(file) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 800, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
-        { type: 'text', text: 'This is a truck driver settlement sheet. Read it carefully. Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Insurance","amount":"45.00","skip":false},{"label":"Fuel Advance","amount":"200.00","skip":true}]}. Rules: 1) date is the settlement period end date. 2) gross is total gross pay before deductions. 3) For each deduction line, set skip:true if it is fuel-related (fuel advance, fuel charge, fuel deduction, DEF, etc) because driver logs fuel receipts separately. Set skip:false for all other deductions like insurance, truck payment, escrow, occupational accident, physical damage, permits, etc.' }
+        { type: 'text', text: 'This is a truck driver settlement sheet. Read it carefully. Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Insurance","amount":"45.00","skip":false},{"label":"Fuel Advance","amount":"200.00","skip":true}]}. Rules: 1) date is the settlement period end date. 2) gross is total gross pay before deductions. 3) For each deduction line, set skip:true if it is fuel-related (fuel advance, fuel charge, fuel deduction, DEF, etc) because the driver logs fuel receipts separately. Set skip:false for all other deductions like insurance, truck payment, escrow, occupational accident, physical damage, permits, etc.' }
       ]}]})
     });
     const d = await r.json();
@@ -1198,25 +1198,25 @@ function renderSettlements() {
   if (!token) return;
   const el = document.getElementById('settlementsList');
   if (!settlements.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><p>No settlements yet.<br>Scan your first settlement sheet!</p></div>'; return; }
-  el.innerHTML = settlements.map(s => {
-    const counted = s.deductions.filter(d => !d.skip);
-    return `<div class="settlement-item">
-      <div class="settlement-header" onclick="toggleSettlement('sd${s.id}')">
-        <div class="settlement-info">
-          <div class="settlement-date">${s.date}</div>
-          <div class="settlement-meta">${counted.length} deduction${counted.length!==1?'s':''} · Net $${s.net.toFixed(2)}</div>
-        </div>
-        <div class="settlement-gross">$${s.gross.toFixed(2)}</div>
-      </div>
-      <div class="settlement-detail" id="sd${s.id}">
-        ${s.photoThumb ? `<img class="receipt-full-img" src="${s.photoThumb}">` : ''}
-        ${s.photoFileId ? `<a href="https://drive.google.com/file/d/${s.photoFileId}/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>` : ''}
-        <div class="deduction-row"><span class="deduction-label">Gross Pay</span><span style="color:#2ed573;font-weight:700">$${s.gross.toFixed(2)}</span></div>
-        ${s.deductions.map(d => `<div class="deduction-row"><span class="deduction-label">${d.label}</span><span class="${d.skip?'deduction-skipped':'deduction-value'}">${d.skip?'skipped (fuel)':'-$'+parseFloat(d.amount).toFixed(2)}</span></div>`).join('')}
-        <div class="deduction-row" style="border-top:1px solid #333;margin-top:4px"><span style="color:#f0f0f0;font-weight:700">Net</span><span style="color:#2ed573;font-weight:700">$${s.net.toFixed(2)}</span></div>
-        <button class="btn-delete" onclick="delSettlement('${s.id}')">🗑️ Delete</button>
-      </div>
-    </div>`;
+  el.innerHTML = settlements.map(function(s) {
+    const counted = s.deductions.filter(function(d) { return !d.skip; });
+    const photoImg = s.photoThumb ? '<img class="receipt-full-img" src="' + s.photoThumb + '">' : '';
+    const photoLink = s.photoFileId ? '<a href="https://drive.google.com/file/d/' + s.photoFileId + '/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>' : '';
+    const deductionRows = s.deductions.map(function(d) {
+      return '<div class="deduction-row"><span class="deduction-label">' + d.label + '</span><span class="' + (d.skip?'deduction-skipped':'deduction-value') + '">' + (d.skip?'skipped (fuel)':'-$'+parseFloat(d.amount).toFixed(2)) + '</span></div>';
+    }).join('');
+    return '<div class="settlement-item">'
+      + '<div class="settlement-header" onclick="toggleSettlement(\'sd' + s.id + '\')">'
+      + '<div class="settlement-info"><div class="settlement-date">' + s.date + '</div>'
+      + '<div class="settlement-meta">' + counted.length + ' deduction' + (counted.length!==1?'s':'') + ' · Net $' + s.net.toFixed(2) + '</div></div>'
+      + '<div class="settlement-gross">$' + s.gross.toFixed(2) + '</div></div>'
+      + '<div class="settlement-detail" id="sd' + s.id + '">'
+      + photoImg + photoLink
+      + '<div class="deduction-row"><span class="deduction-label">Gross Pay</span><span style="color:#2ed573;font-weight:700">$' + s.gross.toFixed(2) + '</span></div>'
+      + deductionRows
+      + '<div class="deduction-row" style="border-top:1px solid #333;margin-top:4px"><span style="color:#f0f0f0;font-weight:700">Net</span><span style="color:#2ed573;font-weight:700">$' + s.net.toFixed(2) + '</span></div>'
+      + '<button class="btn-delete" onclick="delSettlement(\'' + s.id + '\')">🗑️ Delete</button>'
+      + '</div></div>';
   }).join('');
 }
 
@@ -1375,35 +1375,23 @@ function renderPL() {
   const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
   const el = document.getElementById('plContent');
 
-  el.innerHTML = `
-    <div class="pl-box pl-income">
-      <div class="pl-label">Total Income (Gross Settlements)</div>
-      <div class="pl-amount green">$${totalIncome.toFixed(2)}</div>
-      <div style="font-size:12px;color:#555;margin-top:4px">${sList.length} settlement${sList.length!==1?'s':''}</div>
-    </div>
-    <div class="pl-box pl-expense">
-      <div class="pl-label">Total Expenses (Receipts)</div>
-      <div class="pl-amount red">$${totalExpenses.toFixed(2)}</div>
-      <div style="font-size:12px;color:#555;margin-top:4px">${rList.length} receipt${rList.length!==1?'s':''}</div>
-    </div>
-    <div class="pl-box pl-net">
-      <div class="pl-label">Net Profit / Loss</div>
-      <div class="pl-amount ${netProfit >= 0 ? 'profit' : 'loss'}">$${Math.abs(netProfit).toFixed(2)} ${netProfit >= 0 ? '▲' : '▼'}</div>
-      <div style="font-size:12px;color:#555;margin-top:4px">${netProfit >= 0 ? 'Profit' : 'Loss'}</div>
-    </div>
-    ${sorted.length ? `<div class="card"><div class="card-title">Expenses by Category</div>${sorted.map(([cat,amt])=>{
-      const pct=Math.round(amt/totalExpenses*100), n=rList.filter(r=>r.category===cat).length;
-      return `<div class="cat-row"><div style="flex:1"><div class="cat-name">${cat}</div><div class="cat-count">${n} receipt${n!==1?'s':''} · ${pct}%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%"></div></div></div><div class="cat-amount">$${amt.toFixed(2)}</div></div>`;
-    }).join('')}</div>` : ''}
-    <div class="card"><div class="card-title">📋 Audit Summary</div>
-    <p style="font-size:13px;color:#666;line-height:1.8">
-      Gross income: <strong style="color:#2ed573">$${totalIncome.toFixed(2)}</strong><br>
-      Total expenses: <strong style="color:#e94560">$${totalExpenses.toFixed(2)}</strong><br>
-      Net: <strong style="color:${netProfit>=0?'#2ed573':'#e94560'}">$${Math.abs(netProfit).toFixed(2)} ${netProfit>=0?'profit':'loss'}</strong><br>
-      Receipts on file: <strong style="color:#f0f0f0">${rList.length}</strong><br>
-      Settlements on file: <strong style="color:#f0f0f0">${sList.length}</strong><br>
-      Storage: <strong style="color:#2ed573">Google Drive ☁️</strong>
-    </p></div>`;
+  let catRows = '';
+  if (sorted.length) {
+    let rows = '';
+    sorted.forEach(function(entry) {
+      const cat = entry[0], amt = entry[1];
+      const pct = Math.round(amt/totalExpenses*100);
+      const n = rList.filter(r=>r.category===cat).length;
+      rows += '<div class="cat-row"><div style="flex:1"><div class="cat-name">' + cat + '</div><div class="cat-count">' + n + ' receipt' + (n!==1?'s':'') + ' \u00b7 ' + pct + '%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%"></div></div></div><div class="cat-amount">$' + amt.toFixed(2) + '</div></div>';
+    });
+    catRows = '<div class="card"><div class="card-title">Expenses by Category</div>' + rows + '</div>';
+  }
+
+  el.innerHTML = '<div class="pl-box pl-income"><div class="pl-label">Total Income (Gross Settlements)</div><div class="pl-amount green">$' + totalIncome.toFixed(2) + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + sList.length + ' settlement' + (sList.length!==1?'s':'') + '</div></div>'
+    + '<div class="pl-box pl-expense"><div class="pl-label">Total Expenses (Receipts)</div><div class="pl-amount red">$' + totalExpenses.toFixed(2) + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + rList.length + ' receipt' + (rList.length!==1?'s':'') + '</div></div>'
+    + '<div class="pl-box pl-net"><div class="pl-label">Net Profit / Loss</div><div class="pl-amount ' + (netProfit>=0?'profit':'loss') + '">$' + Math.abs(netProfit).toFixed(2) + ' ' + (netProfit>=0?'▲':'▼') + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + (netProfit>=0?'Profit':'Loss') + '</div></div>'
+    + catRows
+    + '<div class="card"><div class="card-title">📋 Audit Summary</div><p style="font-size:13px;color:#666;line-height:1.8">Gross income: <strong style="color:#2ed573">$' + totalIncome.toFixed(2) + '</strong><br>Total expenses: <strong style="color:#e94560">$' + totalExpenses.toFixed(2) + '</strong><br>Net: <strong style="color:' + (netProfit>=0?'#2ed573':'#e94560') + '">$' + Math.abs(netProfit).toFixed(2) + ' ' + (netProfit>=0?'profit':'loss') + '</strong><br>Receipts on file: <strong style="color:#f0f0f0">' + rList.length + '</strong><br>Settlements on file: <strong style="color:#f0f0f0">' + sList.length + '</strong><br>Storage: <strong style="color:#2ed573">Google Drive</strong></p></div>';
 }
 
 function showLoading(m) { document.getElementById('loadingMsg').textContent = m; document.getElementById('loadingOverlay').classList.add('show'); }
