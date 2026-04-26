@@ -1006,8 +1006,6 @@ function renderEld() {
   // All-time totals
   const allTimePerDiem = eldLogs.filter(l => l.awayFromHome).length;
   const allTimeLogs = eldLogs.length;
-  document.getElementById('eldAllTimeCount').textContent = allTimePerDiem;
-  document.getElementById('eldAllTimeLogs').textContent = allTimeLogs;
 
   // Log list for selected year
   const el = document.getElementById('eldLogsList');
