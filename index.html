@@ -103,7 +103,52 @@
   .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #2ed573; color: #000; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 700; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
 
-  /* ELD STYLES */
+  /* HAMBURGER MENU */
+  .hamburger { background: none; border: none; cursor: pointer; padding: 4px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .hamburger span { display: block; width: 22px; height: 2px; background: #f0f0f0; border-radius: 2px; }
+  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; }
+  .drawer-overlay.open { display: block; }
+  .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #111; border-right: 1px solid #222; z-index: 60; transition: left 0.25s ease; padding-top: 60px; }
+  .drawer.open { left: 0; }
+  .drawer-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: #888; font-size: 22px; cursor: pointer; }
+  .drawer-title { font-size: 11px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 1px; padding: 0 20px 10px; }
+  .drawer-item { display: flex; align-items: center; gap: 14px; padding: 14px 20px; cursor: pointer; color: #888; font-size: 15px; font-weight: 600; border-bottom: 1px solid #1a1a1a; transition: all 0.15s; }
+  .drawer-item:active { background: #1a1a1a; }
+  .drawer-item.active { color: #e94560; }
+  .drawer-item .d-icon { font-size: 20px; width: 26px; text-align: center; }
+
+  /* SCAN CHOICE BUTTONS */
+  .scan-choice { display: flex; gap: 10px; margin-bottom: 12px; }
+  .scan-choice-btn { flex: 1; padding: 14px 8px; border: 2px dashed #333; border-radius: 12px; background: #111; color: #888; font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .scan-choice-btn .sc-icon { font-size: 28px; margin-bottom: 4px; }
+  .scan-choice-btn:active { border-color: #e94560; color: #e94560; }
+
+  /* SETTLEMENTS */
+  .settlement-item { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+  .settlement-header { display: flex; align-items: center; padding: 12px 14px; cursor: pointer; }
+  .settlement-info { flex: 1; min-width: 0; }
+  .settlement-date { font-size: 14px; font-weight: 700; color: #f0f0f0; }
+  .settlement-meta { font-size: 12px; color: #666; margin-top: 2px; }
+  .settlement-gross { font-size: 16px; font-weight: 800; color: #2ed573; flex-shrink: 0; margin-left: 8px; }
+  .settlement-detail { display: none; padding: 0 14px 14px; border-top: 1px solid #222; }
+  .settlement-detail.open { display: block; }
+  .deduction-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #1e1e1e; }
+  .deduction-row:last-child { border-bottom: none; }
+  .deduction-label { color: #888; }
+  .deduction-value { color: #e94560; font-weight: 600; }
+  .deduction-skipped { color: #555; font-style: italic; }
+
+  /* P&L */
+  .pl-box { border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+  .pl-income { background: rgba(46,213,115,0.08); border: 1px solid rgba(46,213,115,0.3); }
+  .pl-expense { background: rgba(233,69,96,0.08); border: 1px solid rgba(233,69,96,0.3); }
+  .pl-net { background: #1a1a1a; border: 2px solid #e94560; }
+  .pl-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; color: #888; }
+  .pl-amount { font-size: 32px; font-weight: 800; }
+  .pl-amount.green { color: #2ed573; }
+  .pl-amount.red { color: #e94560; }
+  .pl-amount.profit { color: #2ed573; }
+  .pl-amount.loss { color: #e94560; }
   .eld-counter-box { background: #1a1a1a; border: 2px solid #e94560; border-radius: 14px; padding: 16px 16px 10px; margin-bottom: 10px; }
   .eld-split-counter { display: flex; align-items: center; gap: 0; }
   .eld-split-side { flex: 1; text-align: center; padding: 4px 8px; }
@@ -148,10 +193,27 @@
 <div class="app">
   <div class="header">
     <div class="header-row">
+      <button class="hamburger" onclick="openDrawer()">
+        <span></span><span></span><span></span>
+      </button>
       <h1>Truck<span>Books</span></h1>
       <div class="status-pill red" id="driveStatus">NOT SIGNED IN</div>
     </div>
   </div>
+  <!-- DRAWER OVERLAY -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    <div class="drawer-title">Navigation</div>
+    <div class="drawer-item active" id="d-scan" onclick="switchTab('scan','nav-scan');closeDrawer()"><span class="d-icon">📷</span> Scan Receipt</div>
+    <div class="drawer-item" id="d-receipts" onclick="switchTab('receipts','nav-receipts');closeDrawer()"><span class="d-icon">🧾</span> Receipts</div>
+    <div class="drawer-item" id="d-pl" onclick="switchTab('pl','nav-pl');closeDrawer()"><span class="d-icon">📊</span> P&L</div>
+    <div class="drawer-item" id="d-eld" onclick="switchTab('eld','nav-eld');closeDrawer()"><span class="d-icon">📋</span> ELD Logs</div>
+    <div class="drawer-item" id="d-settlements" onclick="switchTab('settlements','nav-settlements');closeDrawer()"><span class="d-icon">📄</span> Settlements</div>
+    <div class="drawer-title" style="margin-top:16px">Account</div>
+    <div class="drawer-item" id="d-settings" onclick="switchTab('settings','nav-settings');closeDrawer()"><span class="d-icon">⚙️</span> Settings</div>
+  </div>
+
   <div class="bottom-nav">
     <div class="nav-item active" id="nav-scan" onclick="switchTab('scan','nav-scan')">
       <div class="nav-icon">📷</div>
@@ -161,17 +223,17 @@
       <div class="nav-icon">🧾</div>
       <div class="nav-label">Receipts</div>
     </div>
-    <div class="nav-item" id="nav-summary" onclick="switchTab('summary','nav-summary')">
+    <div class="nav-item" id="nav-pl" onclick="switchTab('pl','nav-pl')">
       <div class="nav-icon">📊</div>
-      <div class="nav-label">Summary</div>
+      <div class="nav-label">P&L</div>
     </div>
     <div class="nav-item" id="nav-eld" onclick="switchTab('eld','nav-eld')">
       <div class="nav-icon">📋</div>
       <div class="nav-label">ELD</div>
     </div>
-    <div class="nav-item" id="nav-settings" onclick="switchTab('settings','nav-settings')">
-      <div class="nav-icon">⚙️</div>
-      <div class="nav-label">Settings</div>
+    <div class="nav-item" id="nav-settlements" onclick="switchTab('settlements','nav-settlements')">
+      <div class="nav-icon">📄</div>
+      <div class="nav-label">Settlements</div>
     </div>
   </div>
 
@@ -197,11 +259,18 @@
     <div id="scanContent" style="display:none">
       <div class="card">
         <div class="card-title">📷 Scan a Receipt</div>
-        <div class="scan-zone" onclick="document.getElementById('cameraInput').click()">
-          <div class="icon">📸</div>
-          <p>Tap to take a photo or choose from library</p>
+        <div class="scan-choice">
+          <div class="scan-choice-btn" onclick="document.getElementById('cameraInput').click()">
+            <div class="sc-icon">📷</div>
+            Take Photo
+          </div>
+          <div class="scan-choice-btn" onclick="document.getElementById('libraryInput').click()">
+            <div class="sc-icon">🖼️</div>
+            From Library
+          </div>
         </div>
         <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+        <input type="file" id="libraryInput" accept="image/*" onchange="handlePhoto(this)">
         <img id="receiptPreview" alt="Receipt preview">
         <div class="spinner" id="spinner">Reading receipt with AI...</div>
         <div class="ai-result" id="aiResult">
@@ -218,14 +287,54 @@
     <div id="receiptsList"></div>
   </div>
 
-  <!-- SUMMARY TAB -->
-  <div class="section" id="tab-summary">
+  <!-- P&L TAB -->
+  <div class="section" id="tab-pl">
     <div class="filter-row">
       <div class="filter-btn active" onclick="setFilter('all',this)">All Time</div>
       <div class="filter-btn" onclick="setFilter('year',this)">This Year</div>
       <div class="filter-btn" onclick="setFilter('month',this)">This Month</div>
     </div>
-    <div id="summaryContent"></div>
+    <div id="plContent"></div>
+  </div>
+
+  <!-- SETTLEMENTS TAB -->
+  <div class="section" id="tab-settlements">
+    <div id="settlementsSignInPrompt" style="display:none">
+      <div class="sign-in-screen">
+        <div style="font-size:64px;margin-bottom:16px">📄</div>
+        <h2>Sign In First</h2>
+        <p>Sign in with Google in Settings to use Settlements.</p>
+      </div>
+    </div>
+    <div id="settlementsContent">
+      <div class="card">
+        <div class="card-title">📄 Add Settlement Sheet</div>
+        <div class="scan-choice">
+          <div class="scan-choice-btn" onclick="document.getElementById('settlementCameraInput').click()">
+            <div class="sc-icon">📷</div>
+            Take Photo
+          </div>
+          <div class="scan-choice-btn" onclick="document.getElementById('settlementLibraryInput').click()">
+            <div class="sc-icon">🖼️</div>
+            From Library
+          </div>
+        </div>
+        <input type="file" id="settlementCameraInput" accept="image/*" capture="environment" onchange="handleSettlementPhoto(this)">
+        <input type="file" id="settlementLibraryInput" accept="image/*" onchange="handleSettlementPhoto(this)">
+        <img id="settlementPreview" alt="Settlement preview" style="width:100%;border-radius:8px;margin-bottom:12px;display:none;max-height:300px;object-fit:contain;background:#000;">
+        <button class="btn btn-dark" id="settlementRetakeBtn" onclick="retakeSettlementPhoto()" style="display:none;margin-bottom:12px">🔄 Retake / Choose Again</button>
+        <div class="spinner" id="settlementSpinner">AI reading settlement sheet...</div>
+        <div class="eld-ai-result" id="settlementAiResult">
+          <h4>✅ AI Read This Settlement</h4>
+          <div id="settlementAiRows"></div>
+        </div>
+        <button class="btn btn-red" id="settlementSaveBtn" onclick="saveSettlement()" style="display:none">💾 Save to Google Drive</button>
+      </div>
+      <div class="disclaimer">
+        <p>⚠️ Fuel deductions on settlement sheets are skipped automatically since you log fuel receipts separately.</p>
+      </div>
+      <div id="settlementsList"></div>
+    </div>
   </div>
 
   <!-- ELD TAB -->
@@ -263,11 +372,18 @@
       <!-- Add log -->
       <div class="card">
         <div class="card-title">📋 Add ELD Log</div>
-        <div class="scan-zone" id="eldScanZone" onclick="document.getElementById('eldCameraInput').click()">
-          <div class="icon">📸</div>
-          <p>Take a photo of your ELD log</p>
+        <div class="scan-choice">
+          <div class="scan-choice-btn" onclick="document.getElementById('eldCameraInput').click()">
+            <div class="sc-icon">📷</div>
+            Take Photo
+          </div>
+          <div class="scan-choice-btn" onclick="document.getElementById('eldLibraryInput').click()">
+            <div class="sc-icon">🖼️</div>
+            From Library
+          </div>
         </div>
         <input type="file" id="eldCameraInput" accept="image/*" capture="environment" onchange="handleEldPhoto(this)">
+        <input type="file" id="eldLibraryInput" accept="image/*" onchange="handleEldPhoto(this)">
         <img id="eldPreview" alt="ELD log preview" style="width:100%;border-radius:8px;margin-bottom:12px;display:none;max-height:300px;object-fit:contain;background:#000;">
         <button class="btn btn-dark" id="eldRetakeBtn" onclick="retakeEldPhoto()" style="display:none;margin-bottom:12px">🔄 Retake Photo</button>
         <div class="spinner" id="eldSpinner">AI reading your log...</div>
@@ -405,6 +521,12 @@ let eldDeleteId = null;
 let eldDeleteFileId = null;
 let eldSelectedYear = new Date().getFullYear();
 
+// Settlement state
+let settlements = [];
+let settlementCurrentPhotoBlob = null;
+let settlementCurrentPhoto = null;
+let settlementCurrentResult = null;
+
 // ── INIT ──
 window.onload = () => {
   const savedKey = localStorage.getItem('tb_key');
@@ -449,11 +571,12 @@ async function initDrive() {
   await ensureFolder();
   await loadReceipts();
   await loadEldLogs();
-  renderReceipts(); renderSummary(); renderEld();
+  await loadSettlements();
+  renderReceipts(); renderPL(); renderEld(); renderSettlements();
 }
 
 function signOut() {
-  token = null; receipts = []; eldLogs = []; folderId = null;
+  token = null; receipts = []; eldLogs = []; settlements = []; folderId = null;
   localStorage.removeItem('tb_tok'); localStorage.removeItem('tb_tok_exp'); localStorage.removeItem('tb_folder');
   showSignedOut();
 }
@@ -467,6 +590,8 @@ function showSignedIn() {
   document.getElementById('scanContent').style.display = 'block';
   document.getElementById('eldSignInPrompt').style.display = 'none';
   document.getElementById('eldContent').style.display = 'block';
+  document.getElementById('settlementsSignInPrompt').style.display = 'none';
+  document.getElementById('settlementsContent').style.display = 'block';
 }
 
 function showSignedOut() {
@@ -559,15 +684,24 @@ async function saveEldIndex() {
   }
 }
 
+// ── DRAWER ──
+function openDrawer() { document.getElementById('drawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('open'); }
+function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
+
 // ── TABS ──
 function switchTab(name, navId) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.drawer-item').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById(navId).classList.add('active');
+  const navEl = document.getElementById(navId);
+  if (navEl) navEl.classList.add('active');
+  const dEl = document.getElementById('d-' + name);
+  if (dEl) dEl.classList.add('active');
   if (name === 'receipts') renderReceipts();
-  if (name === 'summary') renderSummary();
+  if (name === 'pl') renderPL();
   if (name === 'eld') renderEld();
+  if (name === 'settlements') renderSettlements();
 }
 
 // ── API KEY ──
@@ -686,7 +820,6 @@ function handleEldPhoto(input) {
     const img = document.getElementById('eldPreview');
     img.src = eldCurrentPhoto;
     img.style.display = 'block';
-    document.getElementById('eldScanZone').style.display = 'none';
     document.getElementById('eldRetakeBtn').style.display = 'block';
     document.getElementById('eldAiResult').style.display = 'none';
     document.getElementById('eldSaveBtn').style.display = 'none';
@@ -752,7 +885,6 @@ async function scanEldWithAI(file) {
 function retakeEldPhoto() {
   eldCurrentPhoto = null; eldCurrentPhotoBlob = null; eldCurrentResult = null; eldAwayFromHome = null;
   document.getElementById('eldPreview').style.display = 'none';
-  document.getElementById('eldScanZone').style.display = 'block';
   document.getElementById('eldRetakeBtn').style.display = 'none';
   document.getElementById('eldAiResult').style.display = 'none';
   document.getElementById('eldDateField').style.display = 'none';
@@ -762,7 +894,7 @@ function retakeEldPhoto() {
   document.getElementById('btnAway').className = 'pill-btn';
   document.getElementById('btnHome').className = 'pill-btn';
   document.getElementById('eldCameraInput').value = '';
-  document.getElementById('eldCameraInput').click();
+  document.getElementById('eldLibraryInput').value = '';
 }
 
 function setAway(val) {
@@ -832,7 +964,6 @@ async function saveEldLog() {
     // Reset form
     eldCurrentPhoto = null; eldCurrentPhotoBlob = null; eldCurrentResult = null; eldAwayFromHome = null;
     document.getElementById('eldPreview').style.display = 'none';
-    document.getElementById('eldScanZone').style.display = 'block';
     document.getElementById('eldRetakeBtn').style.display = 'none';
     document.getElementById('eldAiResult').style.display = 'none';
     document.getElementById('eldDateField').style.display = 'none';
@@ -928,7 +1059,164 @@ async function confirmEldDelete() {
   try { await saveEldIndex(); } catch(e) { console.error(e); }
 }
 
-// ── COMPRESS ──
+// ── LOAD / SAVE SETTLEMENTS ──
+async function loadSettlements() {
+  try {
+    const res = await driveGet(`files?q='${folderId}' in parents and name='settlements.json' and trashed=false&fields=files(id)`);
+    if (res.files && res.files.length) {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+      settlements = await r.json();
+    }
+  } catch(e) { settlements = []; }
+}
+
+async function saveSettlementsIndex() {
+  const content = JSON.stringify(settlements);
+  const blob = new Blob([content], { type: 'application/json' });
+  const res = await driveGet(`files?q='${folderId}' in parents and name='settlements.json' and trashed=false&fields=files(id)`);
+  if (res.files && res.files.length) {
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, {
+      method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob
+    });
+  } else {
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({ name: 'settlements.json', parents: [folderId] })], { type: 'application/json' }));
+    form.append('file', blob);
+    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+  }
+}
+
+// ── SETTLEMENT PHOTO ──
+function handleSettlementPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  settlementCurrentPhotoBlob = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    settlementCurrentPhoto = e.target.result;
+    const img = document.getElementById('settlementPreview');
+    img.src = settlementCurrentPhoto; img.style.display = 'block';
+    document.getElementById('settlementRetakeBtn').style.display = 'block';
+    document.getElementById('settlementAiResult').style.display = 'none';
+    document.getElementById('settlementSaveBtn').style.display = 'none';
+    scanSettlementWithAI(file);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function retakeSettlementPhoto() {
+  settlementCurrentPhoto = null; settlementCurrentPhotoBlob = null; settlementCurrentResult = null;
+  document.getElementById('settlementPreview').style.display = 'none';
+  document.getElementById('settlementRetakeBtn').style.display = 'none';
+  document.getElementById('settlementAiResult').style.display = 'none';
+  document.getElementById('settlementSaveBtn').style.display = 'none';
+}
+
+async function scanSettlementWithAI(file) {
+  const key = localStorage.getItem('tb_key');
+  if (!key) { showToast('Add your API key in Settings'); return; }
+  document.getElementById('settlementSpinner').style.display = 'block';
+  const b64 = await compress(file, 1000, 0.8);
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 800, messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
+        { type: 'text', text: 'This is a truck driver settlement sheet. Read it carefully. Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Insurance","amount":"45.00","skip":false},{"label":"Fuel Advance","amount":"200.00","skip":true}]}. Rules: 1) date is the settlement period end date. 2) gross is total gross pay before deductions. 3) For each deduction line, set skip:true if it is fuel-related (fuel advance, fuel charge, fuel deduction, DEF, etc) because driver logs fuel receipts separately. Set skip:false for all other deductions like insurance, truck payment, escrow, occupational accident, physical damage, permits, etc.' }
+      ]}]})
+    });
+    const d = await r.json();
+    settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    const skipped = settlementCurrentResult.deductions.filter(d => d.skip);
+    const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
+    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount), 0);
+    const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
+    document.getElementById('settlementAiRows').innerHTML = `
+      <div class="result-row"><span class="result-label">Period</span><span class="result-value">${settlementCurrentResult.date}</span></div>
+      <div class="result-row"><span class="result-label">Gross Pay</span><span class="result-value" style="color:#2ed573">$${parseFloat(settlementCurrentResult.gross).toFixed(2)}</span></div>
+      ${counted.map(d=>`<div class="result-row"><span class="result-label">${d.label}</span><span class="result-value" style="color:#e94560">-$${parseFloat(d.amount).toFixed(2)}</span></div>`).join('')}
+      ${skipped.map(d=>`<div class="result-row"><span class="result-label">${d.label}</span><span class="result-value deduction-skipped">skipped (fuel logged separately)</span></div>`).join('')}
+      <div class="result-row" style="border-top:1px solid #333;margin-top:4px;padding-top:8px"><span class="result-label" style="color:#f0f0f0;font-weight:700">Net After Deductions</span><span class="result-value" style="color:#2ed573;font-size:16px">$${net.toFixed(2)}</span></div>`;
+    document.getElementById('settlementAiResult').style.display = 'block';
+    document.getElementById('settlementSaveBtn').style.display = 'block';
+  } catch(e) { showToast('Error reading settlement. Try again.'); console.error(e); }
+  document.getElementById('settlementSpinner').style.display = 'none';
+}
+
+async function saveSettlement() {
+  if (!settlementCurrentResult || !settlementCurrentPhoto) return;
+  if (!token) { showToast('Sign in to Google Drive first'); return; }
+  const btn = document.getElementById('settlementSaveBtn');
+  btn.textContent = 'Saving...'; btn.disabled = true;
+  showLoading('Uploading settlement to Google Drive...');
+  try {
+    const id = Date.now().toString();
+    const compressed = await compress(settlementCurrentPhotoBlob, 1200, 0.75);
+    const photoBlob = await fetch(compressed).then(r => r.blob());
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({ name: `settlement_${id}.jpg`, parents: [folderId] })], { type: 'application/json' }));
+    form.append('file', photoBlob);
+    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
+    }).then(r => r.json());
+    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
+    updateLoading('Saving settlement record...');
+    const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
+    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount), 0);
+    const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
+    settlements.unshift({ id, date: settlementCurrentResult.date, gross: parseFloat(settlementCurrentResult.gross), deductions: settlementCurrentResult.deductions, net, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
+    settlements.sort((a,b) => new Date(b.date) - new Date(a.date));
+    await saveSettlementsIndex();
+    settlementCurrentPhoto = null; settlementCurrentPhotoBlob = null; settlementCurrentResult = null;
+    document.getElementById('settlementPreview').style.display = 'none';
+    document.getElementById('settlementRetakeBtn').style.display = 'none';
+    document.getElementById('settlementAiResult').style.display = 'none';
+    btn.style.display = 'none'; btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
+    hideLoading(); showToast('Settlement saved! ✅');
+    renderSettlements(); renderPL();
+  } catch(e) { btn.textContent = '💾 Save to Google Drive'; btn.disabled = false; hideLoading(); showToast('Save failed. Try again.'); console.error(e); }
+}
+
+function renderSettlements() {
+  if (!token) return;
+  const el = document.getElementById('settlementsList');
+  if (!settlements.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><p>No settlements yet.<br>Scan your first settlement sheet!</p></div>'; return; }
+  el.innerHTML = settlements.map(s => {
+    const counted = s.deductions.filter(d => !d.skip);
+    return `<div class="settlement-item">
+      <div class="settlement-header" onclick="toggleSettlement('sd${s.id}')">
+        <div class="settlement-info">
+          <div class="settlement-date">${s.date}</div>
+          <div class="settlement-meta">${counted.length} deduction${counted.length!==1?'s':''} · Net $${s.net.toFixed(2)}</div>
+        </div>
+        <div class="settlement-gross">$${s.gross.toFixed(2)}</div>
+      </div>
+      <div class="settlement-detail" id="sd${s.id}">
+        ${s.photoThumb ? `<img class="receipt-full-img" src="${s.photoThumb}">` : ''}
+        ${s.photoFileId ? `<a href="https://drive.google.com/file/d/${s.photoFileId}/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>` : ''}
+        <div class="deduction-row"><span class="deduction-label">Gross Pay</span><span style="color:#2ed573;font-weight:700">$${s.gross.toFixed(2)}</span></div>
+        ${s.deductions.map(d => `<div class="deduction-row"><span class="deduction-label">${d.label}</span><span class="${d.skip?'deduction-skipped':'deduction-value'}">${d.skip?'skipped (fuel)':'-$'+parseFloat(d.amount).toFixed(2)}</span></div>`).join('')}
+        <div class="deduction-row" style="border-top:1px solid #333;margin-top:4px"><span style="color:#f0f0f0;font-weight:700">Net</span><span style="color:#2ed573;font-weight:700">$${s.net.toFixed(2)}</span></div>
+        <button class="btn-delete" onclick="delSettlement('${s.id}')">🗑️ Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSettlement(id) { document.getElementById(id).classList.toggle('open'); }
+
+async function delSettlement(id) {
+  if (!confirm('Delete this settlement?')) return;
+  settlements = settlements.filter(s => s.id !== id);
+  renderSettlements(); renderPL();
+  showToast('Settlement deleted');
+  try { await saveSettlementsIndex(); } catch(e) { console.error(e); }
+}
 function compress(file, max, q) {
   return new Promise(res => {
     const img = new Image();
@@ -988,7 +1276,7 @@ async function saveReceipt() {
 function renderReceipts() {
   const el = document.getElementById('receiptsList');
   if (!token) return;
-  const list = filtered();
+  const list = filteredReceipts();
   if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><p>No receipts yet.<br>Scan your first receipt!</p></div>'; return; }
   el.innerHTML = list.map(r => `
     <div class="receipt-item">
@@ -1041,7 +1329,8 @@ async function clearAll() {
 }
 
 // ── SUMMARY ──
-function filtered() {
+// ── P&L ──
+function filteredReceipts() {
   const now = new Date();
   return receipts.filter(r => {
     if (activeFilter === 'all') return true;
@@ -1051,23 +1340,58 @@ function filtered() {
     return true;
   });
 }
-function setFilter(f, btn) { activeFilter = f; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderSummary(); }
-function renderSummary() {
-  const list = filtered();
-  const total = list.reduce((s,r) => s+r.amount, 0);
+function filteredSettlements() {
+  const now = new Date();
+  return settlements.filter(s => {
+    if (activeFilter === 'all') return true;
+    const d = new Date(s.savedAt);
+    if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
+    if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return true;
+  });
+}
+function setFilter(f, btn) { activeFilter = f; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderPL(); }
+
+function renderPL() {
+  const rList = filteredReceipts();
+  const sList = filteredSettlements();
+  const totalIncome = sList.reduce((s,r) => s + r.gross, 0);
+  const totalExpenses = rList.reduce((s,r) => s + r.amount, 0);
+  const netProfit = totalIncome - totalExpenses;
   const cats = {};
-  list.forEach(r => { cats[r.category] = (cats[r.category]||0) + r.amount; });
+  rList.forEach(r => { cats[r.category] = (cats[r.category]||0) + r.amount; });
   const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  const el = document.getElementById('summaryContent');
-  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>No receipts for this period.</p></div>'; return; }
+  const el = document.getElementById('plContent');
+
   el.innerHTML = `
-    <div class="summary-stat"><div class="summary-stat-label">Total Expenses</div><div class="summary-stat-value">$${total.toFixed(2)}</div><div class="summary-stat-sub">${list.length} receipt${list.length!==1?'s':''}</div></div>
-    <div class="card"><div class="card-title">By Category</div>${sorted.map(([cat,amt])=>{
-      const pct=Math.round(amt/total*100), n=list.filter(r=>r.category===cat).length;
+    <div class="pl-box pl-income">
+      <div class="pl-label">Total Income (Gross Settlements)</div>
+      <div class="pl-amount green">$${totalIncome.toFixed(2)}</div>
+      <div style="font-size:12px;color:#555;margin-top:4px">${sList.length} settlement${sList.length!==1?'s':''}</div>
+    </div>
+    <div class="pl-box pl-expense">
+      <div class="pl-label">Total Expenses (Receipts)</div>
+      <div class="pl-amount red">$${totalExpenses.toFixed(2)}</div>
+      <div style="font-size:12px;color:#555;margin-top:4px">${rList.length} receipt${rList.length!==1?'s':''}</div>
+    </div>
+    <div class="pl-box pl-net">
+      <div class="pl-label">Net Profit / Loss</div>
+      <div class="pl-amount ${netProfit >= 0 ? 'profit' : 'loss'}">$${Math.abs(netProfit).toFixed(2)} ${netProfit >= 0 ? '▲' : '▼'}</div>
+      <div style="font-size:12px;color:#555;margin-top:4px">${netProfit >= 0 ? 'Profit' : 'Loss'}</div>
+    </div>
+    ${sorted.length ? `<div class="card"><div class="card-title">Expenses by Category</div>${sorted.map(([cat,amt])=>{
+      const pct=Math.round(amt/totalExpenses*100), n=rList.filter(r=>r.category===cat).length;
       return `<div class="cat-row"><div style="flex:1"><div class="cat-name">${cat}</div><div class="cat-count">${n} receipt${n!==1?'s':''} · ${pct}%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%"></div></div></div><div class="cat-amount">$${amt.toFixed(2)}</div></div>`;
-    }).join('')}</div>
-    <div class="card" style="margin-top:12px"><div class="card-title">📋 Audit Summary</div>
-    <p style="font-size:13px;color:#666;line-height:1.8">Total documented: <strong style="color:#2ed573">$${total.toFixed(2)}</strong><br>Receipts on file: <strong style="color:#f0f0f0">${list.length}</strong><br>Top category: <strong style="color:#f0f0f0">${sorted[0]?sorted[0][0]:'N/A'}</strong><br>Storage: <strong style="color:#2ed573">Google Drive ☁️</strong></p></div>`;
+    }).join('')}</div>` : ''}
+    <div class="card"><div class="card-title">📋 Audit Summary</div>
+    <p style="font-size:13px;color:#666;line-height:1.8">
+      Gross income: <strong style="color:#2ed573">$${totalIncome.toFixed(2)}</strong><br>
+      Total expenses: <strong style="color:#e94560">$${totalExpenses.toFixed(2)}</strong><br>
+      Net: <strong style="color:${netProfit>=0?'#2ed573':'#e94560'}">$${Math.abs(netProfit).toFixed(2)} ${netProfit>=0?'profit':'loss'}</strong><br>
+      Receipts on file: <strong style="color:#f0f0f0">${rList.length}</strong><br>
+      Settlements on file: <strong style="color:#f0f0f0">${sList.length}</strong><br>
+      Storage: <strong style="color:#2ed573">Google Drive ☁️</strong>
+    </p></div>`;
 }
 
 function showLoading(m) { document.getElementById('loadingMsg').textContent = m; document.getElementById('loadingOverlay').classList.add('show'); }
