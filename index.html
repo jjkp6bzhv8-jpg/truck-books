@@ -240,7 +240,8 @@ let activeFilter = 'all';
 
 // ── INIT ──
 window.onload = () => {
-  document.getElementById('apiKeyInput').value = localStorage.getItem('tb_key') || '';
+  const savedKey = localStorage.getItem('tb_key');
+  if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
   handleOAuthCallback();
 };
 
@@ -302,6 +303,7 @@ function signOut() {
   localStorage.removeItem('tb_tok');
   localStorage.removeItem('tb_tok_exp');
   localStorage.removeItem('tb_folder');
+  // API key is intentionally preserved - never cleared on sign out
   showSignedOut();
 }
 
