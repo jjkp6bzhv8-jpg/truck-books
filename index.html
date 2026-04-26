@@ -798,11 +798,6 @@ async function scanWithAI(file) {
   } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
   document.getElementById('spinner').style.display = 'none';
 }
-    document.getElementById('aiResult').style.display = 'block';
-    document.getElementById('saveBtn').style.display = 'block';
-  } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
-  document.getElementById('spinner').style.display = 'none';
-}
 
 function updateMpg(odomVal) {
   currentResult.odometer = odomVal;
