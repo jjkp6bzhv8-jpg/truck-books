@@ -7,7 +7,7 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d0d0d; color: #f0f0f0; min-height: 100vh; overscroll-behavior: none; }
-  .app { max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+  .app { max-width: 480px; margin: 0 auto; padding-bottom: 100px; }
   .header { background: #111; padding: 18px 16px 14px; border-bottom: 2px solid #e94560; position: sticky; top: 0; z-index: 10; }
   .header-row { display: flex; justify-content: space-between; align-items: center; }
   .header h1 { font-size: 24px; font-weight: 800; color: #e94560; letter-spacing: -1px; }
@@ -15,9 +15,11 @@
   .status-pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
   .status-pill.green { background: rgba(46,213,115,0.15); color: #2ed573; border: 1px solid #2ed573; }
   .status-pill.red { background: rgba(233,69,96,0.15); color: #e94560; border: 1px solid #e94560; }
-  .tabs { display: flex; background: #111; border-bottom: 1px solid #222; position: sticky; top: 62px; z-index: 9; }
-  .tab { flex: 1; padding: 9px 2px; text-align: center; font-size: 11px; font-weight: 600; cursor: pointer; color: #555; border-bottom: 2px solid transparent; transition: all 0.2s; text-transform: uppercase; }
-  .tab.active { color: #e94560; border-bottom-color: #e94560; }
+  .bottom-nav { display: flex; background: #111; border-top: 1px solid #222; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 20; padding-bottom: env(safe-area-inset-bottom); }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px 8px; cursor: pointer; color: #555; transition: all 0.2s; border: none; background: none; }
+  .nav-item .nav-icon { font-size: 22px; margin-bottom: 3px; line-height: 1; }
+  .nav-item .nav-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .nav-item.active { color: #e94560; }
   .section { display: none; padding: 16px; }
   .section.active { display: block; }
   .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
@@ -140,12 +142,27 @@
       <div class="status-pill red" id="driveStatus">NOT SIGNED IN</div>
     </div>
   </div>
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('scan',this)">📷 Scan</div>
-    <div class="tab" onclick="switchTab('receipts',this)">🧾 Receipts</div>
-    <div class="tab" onclick="switchTab('summary',this)">📊 Summary</div>
-    <div class="tab" onclick="switchTab('eld',this)">📋 ELD</div>
-    <div class="tab" onclick="switchTab('settings',this)">⚙️ Settings</div>
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-scan" onclick="switchTab('scan','nav-scan')">
+      <div class="nav-icon">📷</div>
+      <div class="nav-label">Scan</div>
+    </div>
+    <div class="nav-item" id="nav-receipts" onclick="switchTab('receipts','nav-receipts')">
+      <div class="nav-icon">🧾</div>
+      <div class="nav-label">Receipts</div>
+    </div>
+    <div class="nav-item" id="nav-summary" onclick="switchTab('summary','nav-summary')">
+      <div class="nav-icon">📊</div>
+      <div class="nav-label">Summary</div>
+    </div>
+    <div class="nav-item" id="nav-eld" onclick="switchTab('eld','nav-eld')">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">ELD</div>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="switchTab('settings','nav-settings')">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Settings</div>
+    </div>
   </div>
 
   <!-- SCAN TAB -->
@@ -232,12 +249,12 @@
       <!-- Add log -->
       <div class="card">
         <div class="card-title">📋 Add ELD Log</div>
-        <div class="scan-zone" onclick="document.getElementById('eldCameraInput').click()">
+        <div class="scan-zone" id="eldScanZone" onclick="document.getElementById('eldCameraInput').click()">
           <div class="icon">📸</div>
           <p>Take a photo of your ELD log</p>
         </div>
         <input type="file" id="eldCameraInput" accept="image/*" capture="environment" onchange="handleEldPhoto(this)">
-        <img id="eldPreview" alt="ELD log preview">
+        <img id="eldPreview" alt="ELD log preview" style="width:100%;border-radius:8px;margin-bottom:12px;display:none;max-height:300px;object-fit:contain;background:#000;">
         <button class="btn btn-dark" id="eldRetakeBtn" onclick="retakeEldPhoto()" style="display:none;margin-bottom:12px">🔄 Retake Photo</button>
         <div class="spinner" id="eldSpinner">AI reading your log...</div>
 
@@ -529,11 +546,11 @@ async function saveEldIndex() {
 }
 
 // ── TABS ──
-function switchTab(name, el) {
+function switchTab(name, navId) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  el.classList.add('active');
+  document.getElementById(navId).classList.add('active');
   if (name === 'receipts') renderReceipts();
   if (name === 'summary') renderSummary();
   if (name === 'eld') renderEld();
@@ -607,7 +624,9 @@ function handleEldPhoto(input) {
   reader.onload = e => {
     eldCurrentPhoto = e.target.result;
     const img = document.getElementById('eldPreview');
-    img.src = eldCurrentPhoto; img.style.display = 'block';
+    img.src = eldCurrentPhoto;
+    img.style.display = 'block';
+    document.getElementById('eldScanZone').style.display = 'none';
     document.getElementById('eldRetakeBtn').style.display = 'block';
     document.getElementById('eldAiResult').style.display = 'none';
     document.getElementById('eldSaveBtn').style.display = 'none';
@@ -673,6 +692,7 @@ async function scanEldWithAI(file) {
 function retakeEldPhoto() {
   eldCurrentPhoto = null; eldCurrentPhotoBlob = null; eldCurrentResult = null; eldAwayFromHome = null;
   document.getElementById('eldPreview').style.display = 'none';
+  document.getElementById('eldScanZone').style.display = 'block';
   document.getElementById('eldRetakeBtn').style.display = 'none';
   document.getElementById('eldAiResult').style.display = 'none';
   document.getElementById('eldDateField').style.display = 'none';
@@ -752,6 +772,8 @@ async function saveEldLog() {
     // Reset form
     eldCurrentPhoto = null; eldCurrentPhotoBlob = null; eldCurrentResult = null; eldAwayFromHome = null;
     document.getElementById('eldPreview').style.display = 'none';
+    document.getElementById('eldScanZone').style.display = 'block';
+    document.getElementById('eldRetakeBtn').style.display = 'none';
     document.getElementById('eldAiResult').style.display = 'none';
     document.getElementById('eldDateField').style.display = 'none';
     document.getElementById('eldMilesField').style.display = 'none';
