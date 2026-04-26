@@ -606,19 +606,43 @@ async function scanWithAI(file) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 300, messages: [{ role: 'user', content: [
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
-        { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Other"}' }
+        { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Other","gallons":"","odometer":""}. For gallons and odometer: only fill in if this is a Fuel receipt AND the value is clearly printed on the receipt. Otherwise leave as empty string.' }
       ]}]})
     });
     const d = await r.json();
     currentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
     currentResult.notes = '';
+    currentResult.gallons = currentResult.gallons || '';
+    currentResult.odometer = currentResult.odometer || '';
+
+    // Calculate MPG if we have odometer and there's a previous fuel receipt with odometer
+    let mpg = '';
+    if (currentResult.category === 'Fuel' && currentResult.odometer && currentResult.gallons) {
+      const lastFuel = receipts.find(r => r.category === 'Fuel' && r.odometer);
+      if (lastFuel) {
+        const milesDriven = parseFloat(currentResult.odometer) - parseFloat(lastFuel.odometer);
+        const gals = parseFloat(currentResult.gallons);
+        if (milesDriven > 0 && gals > 0) mpg = (milesDriven / gals).toFixed(2);
+      }
+    }
+    currentResult.mpg = mpg;
+
+    const isFuel = currentResult.category === 'Fuel';
     document.getElementById('aiResultRows').innerHTML = `
       <div class="result-row"><span class="result-label">Vendor</span><span class="result-value">${currentResult.vendor}</span></div>
       <div class="result-row"><span class="result-label">Date</span><span class="result-value">${currentResult.date}</span></div>
       <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$${parseFloat(currentResult.amount).toFixed(2)}</span></div>
       <div class="result-row"><span class="result-label">Category</span><span class="result-value">${currentResult.category}</span></div>
+      ${isFuel ? `
+      <div class="result-row"><span class="result-label">Gallons</span><span class="result-value">${currentResult.gallons || '—'}</span></div>
+      <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <span class="result-label">Odometer (optional — for MPG)</span>
+        <input type="number" id="odometerInput" placeholder="e.g. 487250" value="${currentResult.odometer}" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="updateMpg(this.value)">
+      </div>
+      <div class="result-row" id="mpgRow" style="${mpg ? '' : 'display:none'}"><span class="result-label">MPG This Tank</span><span class="result-value" id="mpgValue" style="color:#2ed573">${mpg}</span></div>
+      ` : ''}
       <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
         <span class="result-label">Notes (optional)</span>
         <input type="text" id="notesInput" placeholder="e.g. Trip to Atlanta" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="currentResult.notes=this.value">
@@ -627,6 +651,28 @@ async function scanWithAI(file) {
     document.getElementById('saveBtn').style.display = 'block';
   } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
   document.getElementById('spinner').style.display = 'none';
+}
+    document.getElementById('aiResult').style.display = 'block';
+    document.getElementById('saveBtn').style.display = 'block';
+  } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
+  document.getElementById('spinner').style.display = 'none';
+}
+
+function updateMpg(odomVal) {
+  currentResult.odometer = odomVal;
+  if (!odomVal || !currentResult.gallons) { document.getElementById('mpgRow').style.display = 'none'; return; }
+  const lastFuel = receipts.find(r => r.category === 'Fuel' && r.odometer);
+  if (!lastFuel) { document.getElementById('mpgRow').style.display = 'none'; return; }
+  const milesDriven = parseFloat(odomVal) - parseFloat(lastFuel.odometer);
+  const gals = parseFloat(currentResult.gallons);
+  if (milesDriven > 0 && gals > 0) {
+    const mpg = (milesDriven / gals).toFixed(2);
+    currentResult.mpg = mpg;
+    document.getElementById('mpgValue').textContent = mpg;
+    document.getElementById('mpgRow').style.display = 'flex';
+  } else {
+    document.getElementById('mpgRow').style.display = 'none';
+  }
 }
 
 // ── ELD PHOTO ──
@@ -923,7 +969,7 @@ async function saveReceipt() {
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
     updateLoading('Saving receipt record...');
-    receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
+    receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, gallons: currentResult.gallons || '', odometer: currentResult.odometer || '', mpg: currentResult.mpg || '', photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
     await saveIndex();
     currentPhoto = null; currentPhotoBlob = null; currentResult = null;
     document.getElementById('receiptPreview').style.display = 'none';
@@ -958,6 +1004,9 @@ function renderReceipts() {
         <div class="receipt-detail-row"><span class="receipt-detail-label">Date</span><span class="receipt-detail-value">${r.date}</span></div>
         <div class="receipt-detail-row"><span class="receipt-detail-label">Amount</span><span class="receipt-detail-value">$${r.amount.toFixed(2)}</span></div>
         <div class="receipt-detail-row"><span class="receipt-detail-label">Category</span><span class="receipt-detail-value">${r.category}</span></div>
+        ${r.category === 'Fuel' && r.gallons ? `<div class="receipt-detail-row"><span class="receipt-detail-label">Gallons</span><span class="receipt-detail-value">${r.gallons}</span></div>` : ''}
+        ${r.category === 'Fuel' && r.odometer ? `<div class="receipt-detail-row"><span class="receipt-detail-label">Odometer</span><span class="receipt-detail-value">${r.odometer}</span></div>` : ''}
+        ${r.category === 'Fuel' && r.mpg ? `<div class="receipt-detail-row"><span class="receipt-detail-label">MPG This Tank</span><span class="receipt-detail-value" style="color:#2ed573">${r.mpg}</span></div>` : ''}
         <div class="receipt-detail-row"><span class="receipt-detail-label">Notes</span><span class="receipt-detail-value">${r.notes}</span></div>
         <button class="btn-delete" onclick="delReceipt('${r.id}','${r.photoFileId||''}')">🗑️ Delete</button>
       </div>
