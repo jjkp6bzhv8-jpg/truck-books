@@ -1568,19 +1568,21 @@ async function clearAll() {
 
 // ── SUMMARY ──
 // ── P&L ──
+function parseReceiptDate(dateStr, fallback) {
+  if (dateStr && dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    let year = parseInt(parts[2]);
+    if (year < 100) year += 2000; // fix 2-digit year (26 → 2026)
+    return new Date(year, parseInt(parts[0])-1, parseInt(parts[1]));
+  }
+  return new Date(fallback);
+}
+
 function filteredReceipts() {
   const now = new Date();
   return receipts.filter(r => {
     if (activeFilter === 'all') return true;
-    // Use the actual receipt date (MM/DD/YYYY), fall back to savedAt
-    const dateStr = r.date ? r.date : null;
-    let d;
-    if (dateStr && dateStr.includes('/')) {
-      const parts = dateStr.split('/');
-      d = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
-    } else {
-      d = new Date(r.savedAt);
-    }
+    const d = parseReceiptDate(r.date, r.savedAt);
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     return true;
@@ -1590,15 +1592,7 @@ function filteredSettlements() {
   const now = new Date();
   return settlements.filter(s => {
     if (activeFilter === 'all') return true;
-    // Use the actual settlement date (MM/DD/YYYY), fall back to savedAt
-    const dateStr = s.date ? s.date : null;
-    let d;
-    if (dateStr && dateStr.includes('/')) {
-      const parts = dateStr.split('/');
-      d = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
-    } else {
-      d = new Date(s.savedAt);
-    }
+    const d = parseReceiptDate(s.date, s.savedAt);
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     return true;
