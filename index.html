@@ -193,6 +193,11 @@
       <div class="card-title">📋 About TruckBooks</div>
       <p style="font-size:13px;color:#666;line-height:1.6">All receipts and photos are saved to a folder called <strong style="color:#f0f0f0">TruckBooks</strong> in your Google Drive. Your data, your account, forever.</p>
     </div>
+    <div class="card">
+      <div class="card-title">🗑️ Clear All Receipts</div>
+      <p style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.6">This deletes all receipts and photos from Google Drive permanently. Cannot be undone.</p>
+      <button class="btn btn-dark" onclick="clearAll()">Clear All Receipts</button>
+    </div>
   </div>
 </div>
 
@@ -551,6 +556,22 @@ async function confirmDelete() {
     receipts = receipts.filter(r => r.id !== deleteId);
     await saveIndex(); renderReceipts(); renderSummary(); hideLoading(); showToast('Receipt deleted');
   } catch(e) { hideLoading(); showToast('Delete failed'); }
+}
+
+async function clearAll() {
+  if (!confirm('Delete ALL receipts and photos from Google Drive? This cannot be undone.')) return;
+  showLoading('Clearing all receipts...');
+  try {
+    for (const r of receipts) {
+      if (r.photoFileId) {
+        try { await fetch(`https://www.googleapis.com/drive/v3/files/${r.photoFileId}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }); } catch(e) {}
+      }
+    }
+    receipts = [];
+    await saveIndex();
+    renderReceipts(); renderSummary();
+    hideLoading(); showToast('All receipts cleared');
+  } catch(e) { hideLoading(); showToast('Clear failed'); }
 }
 
 // ── SUMMARY ──
