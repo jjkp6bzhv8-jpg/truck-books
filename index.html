@@ -392,9 +392,26 @@
   <!-- P&L TAB -->
   <div class="section" id="tab-pl">
     <div class="filter-row">
-      <div class="filter-btn active" onclick="setFilter('all',this)">All Time</div>
       <div class="filter-btn" onclick="setFilter('year',this)">This Year</div>
-      <div class="filter-btn" onclick="setFilter('month',this)">This Month</div>
+      <div class="filter-btn active" onclick="setFilter('month',this)">This Month</div>
+      <div class="filter-btn" onclick="setFilter('pick',this)">Pick Month</div>
+    </div>
+    <div id="plPickerRow" style="display:none;gap:8px;margin-bottom:12px;display:none">
+      <select id="plPickMonth" onchange="renderPL()" style="flex:1">
+        <option value="0">January</option>
+        <option value="1">February</option>
+        <option value="2">March</option>
+        <option value="3">April</option>
+        <option value="4">May</option>
+        <option value="5">June</option>
+        <option value="6">July</option>
+        <option value="7">August</option>
+        <option value="8">September</option>
+        <option value="9">October</option>
+        <option value="10">November</option>
+        <option value="11">December</option>
+      </select>
+      <select id="plPickYear" onchange="renderPL()" style="flex:1"></select>
     </div>
     <div id="plContent"></div>
   </div>
@@ -698,7 +715,7 @@ let currentPhotoBlob = null;
 let currentResult = null;
 let deleteId = null;
 let deleteFileId = null;
-let activeFilter = 'all';
+let activeFilter = 'month';
 
 // ELD state
 let eldCurrentPhotoBlob = null;
@@ -1581,24 +1598,52 @@ function parseReceiptDate(dateStr, fallback) {
 function filteredReceipts() {
   const now = new Date();
   return receipts.filter(r => {
-    if (activeFilter === 'all') return true;
     const d = parseReceiptDate(r.date, r.savedAt);
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (activeFilter === 'pick') {
+      const m = parseInt(document.getElementById('plPickMonth')?.value ?? now.getMonth());
+      const y = parseInt(document.getElementById('plPickYear')?.value ?? now.getFullYear());
+      return d.getFullYear() === y && d.getMonth() === m;
+    }
     return true;
   });
 }
 function filteredSettlements() {
   const now = new Date();
   return settlements.filter(s => {
-    if (activeFilter === 'all') return true;
     const d = parseReceiptDate(s.date, s.savedAt);
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (activeFilter === 'pick') {
+      const m = parseInt(document.getElementById('plPickMonth')?.value ?? now.getMonth());
+      const y = parseInt(document.getElementById('plPickYear')?.value ?? now.getFullYear());
+      return d.getFullYear() === y && d.getMonth() === m;
+    }
     return true;
   });
 }
-function setFilter(f, btn) { activeFilter = f; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderPL(); }
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const pickerRow = document.getElementById('plPickerRow');
+  if (f === 'pick') {
+    pickerRow.style.display = 'flex';
+    // Populate year dropdown from receipt/settlement years
+    const years = new Set([new Date().getFullYear()]);
+    receipts.forEach(r => { const d = parseReceiptDate(r.date, r.savedAt); years.add(d.getFullYear()); });
+    settlements.forEach(s => { const d = parseReceiptDate(s.date, s.savedAt); years.add(d.getFullYear()); });
+    const sorted = [...years].sort((a,b) => b-a);
+    const yearSel = document.getElementById('plPickYear');
+    yearSel.innerHTML = sorted.map(y => `<option value="${y}">${y}</option>`).join('');
+    // Default to current month
+    document.getElementById('plPickMonth').value = new Date().getMonth();
+  } else {
+    pickerRow.style.display = 'none';
+  }
+  renderPL();
+}
 
 function renderPL() {
   const rList = filteredReceipts();
