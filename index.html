@@ -104,10 +104,20 @@
   .toast.show { opacity: 1; }
 
   /* ELD STYLES */
-  .eld-counter-box { background: #1a1a1a; border: 2px solid #e94560; border-radius: 14px; padding: 20px; margin-bottom: 12px; text-align: center; }
-  .eld-counter-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .eld-counter-big { font-size: 52px; font-weight: 800; color: #e94560; line-height: 1; }
-  .eld-counter-sub { font-size: 13px; color: #555; margin-top: 6px; }
+  .eld-counter-box { background: #1a1a1a; border: 2px solid #e94560; border-radius: 14px; padding: 16px 16px 10px; margin-bottom: 10px; }
+  .eld-split-counter { display: flex; align-items: center; gap: 0; }
+  .eld-split-side { flex: 1; text-align: center; padding: 4px 8px; }
+  .eld-split-label { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .eld-split-num { font-size: 48px; font-weight: 800; color: #e94560; line-height: 1; }
+  .eld-split-num-white { color: #f0f0f0; }
+  .eld-split-sub { font-size: 10px; color: #555; margin-top: 4px; }
+  .eld-split-divider { width: 1px; height: 70px; background: #333; flex-shrink: 0; }
+  .eld-counter-year-tag { text-align: center; font-size: 11px; color: #555; margin-top: 10px; border-top: 1px solid #2a2a2a; padding-top: 8px; }
+  .eld-alltime-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .eld-alltime-item { flex: 1; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px; text-align: center; }
+  .eld-alltime-label { font-size: 9px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .eld-alltime-num { font-size: 26px; font-weight: 800; color: #e94560; }
+  .eld-alltime-num-white { color: #f0f0f0; }
   .eld-year-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .eld-year-btn { flex: 1; min-width: 60px; padding: 8px; border: 1px solid #333; border-radius: 8px; background: #1a1a1a; color: #888; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; }
   .eld-year-btn.active { background: #e94560; color: white; border-color: #e94560; }
@@ -124,10 +134,10 @@
   .eld-log-status.home { color: #555; }
   .eld-log-detail { display: none; padding: 0 14px 14px; border-top: 1px solid #222; }
   .eld-log-detail.open { display: block; }
-  .away-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
-  .away-btn { flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #333; background: #111; color: #555; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.15s; }
-  .away-btn.selected-away { border-color: #e94560; background: rgba(233,69,96,0.15); color: #e94560; }
-  .away-btn.selected-home { border-color: #555; background: rgba(85,85,85,0.15); color: #aaa; }
+  .pill-toggle { display: flex; gap: 8px; }
+  .pill-btn { flex: 1; padding: 9px 8px; border-radius: 20px; border: 1px solid #333; background: #111; color: #555; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .pill-btn.selected-away { border-color: #e94560; background: rgba(233,69,96,0.15); color: #e94560; }
+  .pill-btn.selected-home { border-color: #555; background: rgba(85,85,85,0.15); color: #aaa; }
   .eld-ai-result { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px; margin-bottom: 12px; display: none; }
   .eld-ai-result h4 { color: #2ed573; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
   .disclaimer { background: #111; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
@@ -232,18 +242,34 @@
       <!-- Year filter -->
       <div class="eld-year-row" id="eldYearBtns"></div>
 
-      <!-- Per diem day counter -->
+      <!-- Split counter -->
       <div class="eld-counter-box">
-        <div class="eld-counter-label">Per Diem Days — <span id="eldCounterYear"></span></div>
-        <div class="eld-counter-big" id="eldDayCount">0</div>
-        <div class="eld-counter-sub">qualifying away-from-home days</div>
+        <div class="eld-split-counter">
+          <div class="eld-split-side">
+            <div class="eld-split-label">PER DIEM DAYS</div>
+            <div class="eld-split-num" id="eldDayCount">0</div>
+            <div class="eld-split-sub">qualifying days</div>
+          </div>
+          <div class="eld-split-divider"></div>
+          <div class="eld-split-side">
+            <div class="eld-split-label">TOTAL LOGS</div>
+            <div class="eld-split-num eld-split-num-white" id="eldTotalCount">0</div>
+            <div class="eld-split-sub">days logged</div>
+          </div>
+        </div>
+        <div class="eld-counter-year-tag">📅 <span id="eldCounterYear"></span></div>
       </div>
 
-      <!-- Running all-time total -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="summary-stat-label">All-Time Total Qualifying Days</div>
-        <div class="summary-stat-value" id="eldAllTimeCount" style="font-size:22px;margin-top:4px">0</div>
-        <div class="eld-counter-sub" style="margin-top:4px">across all years on record</div>
+      <!-- All-time row -->
+      <div class="eld-alltime-row">
+        <div class="eld-alltime-item">
+          <div class="eld-alltime-label">ALL-TIME PER DIEM</div>
+          <div class="eld-alltime-num" id="eldAllTimeCount">0</div>
+        </div>
+        <div class="eld-alltime-item">
+          <div class="eld-alltime-label">ALL-TIME LOGS</div>
+          <div class="eld-alltime-num eld-alltime-num-white" id="eldAllTimeLogs">0</div>
+        </div>
       </div>
 
       <!-- Add log -->
@@ -275,12 +301,12 @@
           <input type="number" id="eldMilesInput" placeholder="0">
         </div>
 
-        <!-- Away/Home toggle -->
+        <!-- Away/Home pill toggle -->
         <div id="eldAwayField" style="display:none;margin-bottom:12px">
-          <label style="margin-bottom:8px">Was this day away from home?</label>
-          <div class="away-toggle">
-            <div class="away-btn" id="btnAway" onclick="setAway(true)">🚛 Away from Home</div>
-            <div class="away-btn" id="btnHome" onclick="setAway(false)">🏠 Home / Off</div>
+          <label style="margin-bottom:8px">Per Diem Qualifying Day?</label>
+          <div class="pill-toggle">
+            <div class="pill-btn" id="btnAway" onclick="setAway(true)">✅ Away — Qualifies</div>
+            <div class="pill-btn" id="btnHome" onclick="setAway(false)">🏠 Home / Off</div>
           </div>
         </div>
 
@@ -699,16 +725,16 @@ function retakeEldPhoto() {
   document.getElementById('eldMilesField').style.display = 'none';
   document.getElementById('eldAwayField').style.display = 'none';
   document.getElementById('eldSaveBtn').style.display = 'none';
-  document.getElementById('btnAway').className = 'away-btn';
-  document.getElementById('btnHome').className = 'away-btn';
+  document.getElementById('btnAway').className = 'pill-btn';
+  document.getElementById('btnHome').className = 'pill-btn';
   document.getElementById('eldCameraInput').value = '';
   document.getElementById('eldCameraInput').click();
 }
 
 function setAway(val) {
   eldAwayFromHome = val;
-  document.getElementById('btnAway').className = val ? 'away-btn selected-away' : 'away-btn';
-  document.getElementById('btnHome').className = !val ? 'away-btn selected-home' : 'away-btn';
+  document.getElementById('btnAway').className = val ? 'pill-btn selected-away' : 'pill-btn';
+  document.getElementById('btnHome').className = !val ? 'pill-btn selected-home' : 'pill-btn';
 }
 
 function toInputDate(str) {
@@ -780,8 +806,8 @@ async function saveEldLog() {
     document.getElementById('eldAwayField').style.display = 'none';
     btn.style.display = 'none';
     btn.textContent = '💾 Save Log to Google Drive'; btn.disabled = false;
-    document.getElementById('btnAway').className = 'away-btn';
-    document.getElementById('btnHome').className = 'away-btn';
+    document.getElementById('btnAway').className = 'pill-btn';
+    document.getElementById('btnHome').className = 'pill-btn';
     hideLoading();
     showToast('ELD Log saved! ✅');
     renderEld();
@@ -811,10 +837,13 @@ function renderEld() {
   const yearLogs = eldLogs.filter(l => l.date && parseInt(l.date.split('/')[2]) === eldSelectedYear);
   const qualifyingDays = yearLogs.filter(l => l.awayFromHome).length;
   document.getElementById('eldDayCount').textContent = qualifyingDays;
+  document.getElementById('eldTotalCount').textContent = yearLogs.length;
 
-  // All-time total
-  const allTimeTotal = eldLogs.filter(l => l.awayFromHome).length;
-  document.getElementById('eldAllTimeCount').textContent = allTimeTotal;
+  // All-time totals
+  const allTimePerDiem = eldLogs.filter(l => l.awayFromHome).length;
+  const allTimeLogs = eldLogs.length;
+  document.getElementById('eldAllTimeCount').textContent = allTimePerDiem;
+  document.getElementById('eldAllTimeLogs').textContent = allTimeLogs;
 
   // Log list for selected year
   const el = document.getElementById('eldLogsList');
