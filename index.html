@@ -385,6 +385,7 @@
           <div id="aiResultRows"></div>
         </div>
         <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save to Google Drive</button>
+        <button class="btn btn-dark" id="cancelScanBtn" onclick="cancelScan()" style="display:none;margin-top:8px">✕ Cancel</button>
       </div>
       <div id="receiptsList"></div>
     </div>
@@ -997,6 +998,7 @@ function handlePhoto(input) {
     img.src = currentPhoto; img.style.display = 'block';
     document.getElementById('aiResult').style.display = 'none';
     document.getElementById('saveBtn').style.display = 'none';
+    document.getElementById('cancelScanBtn').style.display = 'block';
     scanWithAI(file);
   };
   reader.readAsDataURL(file);
@@ -1887,6 +1889,16 @@ async function saveBol() {
     hideLoading(); showToast('BOL saved! ✅');
     renderBols();
   } catch(e) { btn.textContent = '💾 Save to Google Drive'; btn.disabled = false; hideLoading(); showToast('Save failed. Try again.'); console.error(e); }
+}
+
+function cancelScan() {
+  currentPhoto = null; currentPhotoBlob = null; currentResult = null;
+  document.getElementById('receiptPreview').style.display = 'none';
+  document.getElementById('receiptPreview').src = '';
+  document.getElementById('aiResult').style.display = 'none';
+  document.getElementById('saveBtn').style.display = 'none';
+  document.getElementById('cancelScanBtn').style.display = 'none';
+  document.getElementById('spinner').style.display = 'none';
 }
 
 // ── EXPORT / AUDIT REPORT ──
