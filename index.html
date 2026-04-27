@@ -628,9 +628,7 @@
       </div>
       <div class="field" id="exportCatField">
         <label>Category</label>
-        <select id="exportCat">
-          <option value="all">All Categories</option>
-        </select>
+        <select id="exportCat"><option value="all">All Categories</option></select>
       </div>
       <div class="field">
         <label>Date Range — From</label>
@@ -735,7 +733,7 @@
 <script>
 // ── GOOGLE OAUTH CONFIG ──
 const CLIENT_ID = '691333944716-a6lth53532ob8clgek8oteg77l15pa0u.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 const REDIRECT = window.location.origin + window.location.pathname;
 
 // ── STATE ──
@@ -892,9 +890,7 @@ async function loadReceipts() {
     const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
     if (res.files && res.files.length) {
       const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
-      if (r.status === 401) { signOut(); return; }
-      const text = await r.text();
-      try { receipts = JSON.parse(text); } catch(e) { receipts = []; }
+      receipts = await r.json();
     }
   } catch(e) { receipts = []; }
 }
@@ -976,8 +972,8 @@ function switchTab(name, navId) {
   if (name === 'eld') renderEld();
   if (name === 'settlements') renderSettlements();
   if (name === 'bol') renderBols();
-  if (name === 'home') renderHome();
   if (name === 'export') { populateExportCategories(); updateExportCatVisibility(); }
+  if (name === 'home') renderHome();
 }
 
 // ── API KEY ──
@@ -1222,6 +1218,11 @@ async function saveEldLog() {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
 
+    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
+
     updateLoading('Saving log record...');
     eldLogs.unshift({ id, date: logDate, miles, awayFromHome: eldAwayFromHome, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
     // Sort by date descending
@@ -1425,6 +1426,10 @@ async function saveSettlement() {
     const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
+    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
     updateLoading('Saving settlement record...');
     const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
     const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount), 0);
@@ -1535,6 +1540,10 @@ async function doSaveReceipt() {
     const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
+    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
     updateLoading('Saving receipt record...');
     receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, gallons: currentResult.gallons || '', odometer: currentResult.odometer || '', mpg: currentResult.mpg || '', photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
     receipts.sort(function(a,b){ var da=a.date?new Date(a.date):new Date(a.savedAt); var db=b.date?new Date(b.date):new Date(b.savedAt); return db-da; });
@@ -1852,6 +1861,10 @@ async function saveBol() {
     const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
+    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
     updateLoading('Saving BOL record...');
     const bolDate = fromInputDate(document.getElementById('bolDate').value) || '';
     bols.unshift({
@@ -1917,94 +1930,52 @@ function generateExport() {
   const cat = document.getElementById('exportCat')?.value || 'all';
   const from = document.getElementById('exportFrom').value;
   const to = document.getElementById('exportTo').value;
-
   const dateLabel = (from || to) ? ((from || '—') + ' to ' + (to || '—')) : 'All Time';
   let html = `<html><head><meta charset="UTF-8"><title>TruckBooks Audit Report</title>
-  <style>
-    body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:20px;max-width:900px;margin:0 auto}
-    h1{font-size:20px;margin-bottom:4px}
-    .sub{font-size:12px;color:#555;margin-bottom:20px}
-    table{width:100%;border-collapse:collapse;margin-bottom:24px}
-    th{background:#222;color:#fff;padding:8px 10px;text-align:left;font-size:12px}
-    td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}
-    tr:nth-child(even){background:#f9f9f9}
-    .section-title{font-size:15px;font-weight:bold;margin:20px 0 8px;border-bottom:2px solid #222;padding-bottom:4px}
-    .total{font-weight:bold;font-size:13px;text-align:right;margin-top:4px}
-    .footer{font-size:11px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
-    @media print{body{padding:0}}
-  </style></head><body>
+  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:20px;max-width:900px;margin:0 auto}h1{font-size:20px;margin-bottom:4px}.sub{font-size:12px;color:#555;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:24px}th{background:#222;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}tr:nth-child(even){background:#f9f9f9}.section-title{font-size:15px;font-weight:bold;margin:20px 0 8px;border-bottom:2px solid #222;padding-bottom:4px}.total{font-weight:bold;font-size:13px;text-align:right;margin-top:4px}.footer{font-size:11px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}@media print{body{padding:0}}</style></head><body>
   <h1>🚛 TruckBooks — Audit Report</h1>
   <div class="sub">Date Range: ${dateLabel} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</div>`;
-
-  // RECEIPTS
   if (type === 'receipts' || type === 'all') {
     let list = receipts.filter(r => exportDateFilter(r.date, r.savedAt, from, to));
     if (cat !== 'all') list = list.filter(r => r.category === cat);
-    const catLabel = cat === 'all' ? 'All Categories' : cat;
-    html += `<div class="section-title">🧾 Receipts — ${catLabel}</div>`;
-    if (!list.length) {
-      html += '<p style="color:#888">No receipts found for this filter.</p>';
-    } else {
+    html += `<div class="section-title">🧾 Receipts — ${cat === 'all' ? 'All Categories' : cat}</div>`;
+    if (!list.length) { html += '<p style="color:#888">No receipts found.</p>'; }
+    else {
       let total = 0;
       html += '<table><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Notes</th></tr>';
-      list.forEach(r => {
-        total += parseFloat(r.amount) || 0;
-        html += `<tr><td>${r.date||'—'}</td><td>${r.vendor||'—'}</td><td>${r.category||'—'}</td><td>$${(parseFloat(r.amount)||0).toFixed(2)}</td><td>${r.notes||''}</td></tr>`;
-      });
-      html += '</table>';
-      html += `<div class="total">Total Expenses: $${total.toFixed(2)}</div>`;
+      list.forEach(r => { total += parseFloat(r.amount)||0; html += `<tr><td>${r.date||'—'}</td><td>${r.vendor||'—'}</td><td>${r.category||'—'}</td><td>$${(parseFloat(r.amount)||0).toFixed(2)}</td><td>${r.notes||''}</td></tr>`; });
+      html += `</table><div class="total">Total: $${total.toFixed(2)}</div>`;
     }
   }
-
-  // SETTLEMENTS
   if (type === 'settlements' || type === 'all') {
     const list = settlements.filter(s => exportDateFilter(s.date, s.savedAt, from, to));
     html += `<div class="section-title">📄 Settlements</div>`;
-    if (!list.length) {
-      html += '<p style="color:#888">No settlements found for this filter.</p>';
-    } else {
+    if (!list.length) { html += '<p style="color:#888">No settlements found.</p>'; }
+    else {
       let total = 0;
       html += '<table><tr><th>Date</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th></tr>';
-      list.forEach(s => {
-        const gross = parseFloat(s.gross) || 0;
-        const dedTotal = (s.deductions||[]).reduce((a,d) => a + (parseFloat(d.amount)||0), 0);
-        const net = gross - dedTotal;
-        total += gross;
-        const dedStr = (s.deductions||[]).map(d => d.label + ': $' + (parseFloat(d.amount)||0).toFixed(2)).join(', ');
-        html += `<tr><td>${s.date||'—'}</td><td>$${gross.toFixed(2)}</td><td style="font-size:11px">${dedStr||'—'}</td><td>$${net.toFixed(2)}</td></tr>`;
-      });
-      html += '</table>';
-      html += `<div class="total">Total Gross Income: $${total.toFixed(2)}</div>`;
+      list.forEach(s => { const gross=parseFloat(s.gross)||0; const ded=(s.deductions||[]).reduce((a,d)=>a+(parseFloat(d.amount)||0),0); total+=gross; html += `<tr><td>${s.date||'—'}</td><td>$${gross.toFixed(2)}</td><td style="font-size:11px">${(s.deductions||[]).map(d=>d.label+': $'+(parseFloat(d.amount)||0).toFixed(2)).join(', ')||'—'}</td><td>$${(gross-ded).toFixed(2)}</td></tr>`; });
+      html += `</table><div class="total">Total Gross: $${total.toFixed(2)}</div>`;
     }
   }
-
-  // ELD LOGS
   if (type === 'eld' || type === 'all') {
     const list = eldLogs.filter(e => exportDateFilter(e.date, e.savedAt, from, to));
     html += `<div class="section-title">📋 ELD Logs</div>`;
-    if (!list.length) {
-      html += '<p style="color:#888">No ELD logs found for this filter.</p>';
-    } else {
-      let totalMiles = 0; let awayDays = 0;
+    if (!list.length) { html += '<p style="color:#888">No ELD logs found.</p>'; }
+    else {
+      let totalMiles=0; let awayDays=0;
       html += '<table><tr><th>Date</th><th>Miles</th><th>Away From Home</th></tr>';
-      list.forEach(e => {
-        totalMiles += parseFloat(e.miles) || 0;
-        if (e.awayFromHome) awayDays++;
-        html += `<tr><td>${e.date||'—'}</td><td>${e.miles||'—'}</td><td>${e.awayFromHome ? 'Yes' : 'No'}</td></tr>`;
-      });
-      html += '</table>';
-      html += `<div class="total">Total Miles: ${totalMiles.toLocaleString()} &nbsp;|&nbsp; Away Days: ${awayDays}</div>`;
+      list.forEach(e => { totalMiles+=parseFloat(e.miles)||0; if(e.awayFromHome)awayDays++; html+=`<tr><td>${e.date||'—'}</td><td>${e.miles||'—'}</td><td>${e.awayFromHome?'Yes':'No'}</td></tr>`; });
+      html += `</table><div class="total">Total Miles: ${totalMiles.toLocaleString()} | Away Days: ${awayDays}</div>`;
     }
   }
-
-  html += `<div class="footer">Generated by TruckBooks &nbsp;|&nbsp; For tax and audit purposes only</div></body></html>`;
-
+  html += `<div class="footer">Generated by TruckBooks</div></body></html>`;
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
 }
 
-
+// ── RENDER BOLS ──
 function renderBols() {
   if (!token) return;
   const el = document.getElementById('bolList');
