@@ -890,7 +890,9 @@ async function loadReceipts() {
     const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
     if (res.files && res.files.length) {
       const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
-      receipts = await r.json();
+      if (r.status === 401) { signOut(); return; }
+      const text = await r.text();
+      try { receipts = JSON.parse(text); } catch(e) { receipts = []; }
     }
   } catch(e) { receipts = []; }
 }
