@@ -1902,7 +1902,7 @@ async function saveBol() {
 function openFullImg(src) {
   const img = document.getElementById('fullImgEl');
   img.src = src;
-  img.style.transform = 'scale(1)';
+  img.style.transform = 'scale(1) translate(0px, 0px)';
   img.style.transformOrigin = 'center center';
   document.getElementById('fullImgOverlay').classList.add('open');
   initPinchZoom(img);
@@ -1913,26 +1913,44 @@ function closeFullImg() {
 }
 function initPinchZoom(el) {
   let scale = 1, startDist = 0, startScale = 1;
+  let tx = 0, ty = 0, startTx = 0, startTy = 0, panStart = null;
+
+  function applyTransform() {
+    el.style.transform = 'scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+  }
+
   el.addEventListener('touchstart', function(e) {
     if (e.touches.length === 2) {
       startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       startScale = scale;
+      panStart = null;
+      e.preventDefault();
+    } else if (e.touches.length === 1 && scale > 1) {
+      panStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, tx: tx, ty: ty };
       e.preventDefault();
     }
   }, { passive: false });
+
   el.addEventListener('touchmove', function(e) {
     if (e.touches.length === 2) {
       const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       scale = Math.min(Math.max(startScale * (dist / startDist), 1), 5);
-      el.style.transform = 'scale(' + scale + ')';
+      applyTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 1 && panStart && scale > 1) {
+      tx = panStart.tx + (e.touches[0].clientX - panStart.x) / scale;
+      ty = panStart.ty + (e.touches[0].clientY - panStart.y) / scale;
+      applyTransform();
       e.preventDefault();
     }
   }, { passive: false });
+
   el.addEventListener('touchend', function(e) {
     if (e.touches.length < 2 && scale < 1.1) {
-      scale = 1;
-      el.style.transform = 'scale(1)';
+      scale = 1; tx = 0; ty = 0;
+      applyTransform();
     }
+    panStart = null;
   });
 }
 
