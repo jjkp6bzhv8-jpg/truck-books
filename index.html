@@ -1513,6 +1513,7 @@ async function doSaveReceipt() {
     });
     updateLoading('Saving receipt record...');
     receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, gallons: currentResult.gallons || '', odometer: currentResult.odometer || '', mpg: currentResult.mpg || '', photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
+    receipts.sort(function(a,b){ var da=a.date?new Date(a.date):new Date(a.savedAt); var db=b.date?new Date(b.date):new Date(b.savedAt); return db-da; });
     await saveIndex();
     currentPhoto = null; currentPhotoBlob = null; currentResult = null;
     document.getElementById('receiptPreview').style.display = 'none';
