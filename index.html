@@ -1552,9 +1552,10 @@ async function doSaveReceipt() {
     document.getElementById('receiptPreview').style.display = 'none';
     document.getElementById('aiResult').style.display = 'none';
     btn.style.display = 'none';
+    document.getElementById('cancelScanBtn').style.display = 'none';
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
     hideLoading(); showToast('Saved to Google Drive! ✅');
-    renderReceipts(); renderSummary();
+    renderReceipts(); renderSummary(); renderHome();
   } catch(e) {
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
     hideLoading(); showToast('Save failed. Try again.'); console.error(e);
