@@ -1222,11 +1222,6 @@ async function saveEldLog() {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
 
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
-
     updateLoading('Saving log record...');
     eldLogs.unshift({ id, date: logDate, miles, awayFromHome: eldAwayFromHome, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
     // Sort by date descending
@@ -1430,10 +1425,6 @@ async function saveSettlement() {
     const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
     updateLoading('Saving settlement record...');
     const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
     const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount), 0);
@@ -1544,10 +1535,6 @@ async function doSaveReceipt() {
     const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
     updateLoading('Saving receipt record...');
     receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, gallons: currentResult.gallons || '', odometer: currentResult.odometer || '', mpg: currentResult.mpg || '', photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
     receipts.sort(function(a,b){ var da=a.date?new Date(a.date):new Date(a.savedAt); var db=b.date?new Date(b.date):new Date(b.savedAt); return db-da; });
@@ -1865,10 +1852,6 @@ async function saveBol() {
     const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
     }).then(r => r.json());
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
     updateLoading('Saving BOL record...');
     const bolDate = fromInputDate(document.getElementById('bolDate').value) || '';
     bols.unshift({
