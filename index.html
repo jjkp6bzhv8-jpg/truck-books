@@ -1565,7 +1565,9 @@ async function doSaveReceipt() {
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
     hideLoading(); showToast('Saved to Google Drive! ✅');
     renderReceipts(); renderSummary(); renderHome();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   } catch(e) {
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
     hideLoading(); showToast('Save failed. Try again.'); console.error(e);
