@@ -735,7 +735,7 @@
 <script>
 // ── GOOGLE OAUTH CONFIG ──
 const CLIENT_ID = '691333944716-a6lth53532ob8clgek8oteg77l15pa0u.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 const REDIRECT = window.location.origin + window.location.pathname;
 
 // ── STATE ──
@@ -865,6 +865,8 @@ function showSignedOut() {
 
 // ── DRIVE FOLDER ──
 async function ensureFolder() {
+  const cached = localStorage.getItem('tb_folder');
+  if (cached) { folderId = cached; return; }
   const res = await driveGet(`files?q=name='TruckBooks' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`);
   if (res.files && res.files.length) { folderId = res.files[0].id; }
   else { const f = await drivePost('files', { name: 'TruckBooks', mimeType: 'application/vnd.google-apps.folder' }); folderId = f.id; }
