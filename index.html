@@ -1564,7 +1564,7 @@ async function doSaveReceipt() {
     document.getElementById('cancelScanBtn').style.display = 'none';
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
     hideLoading(); showToast('Saved to Google Drive! ✅');
-    renderReceipts(); renderSummary(); renderHome();
+    renderReceipts(); renderPL(); renderHome();
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
