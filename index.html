@@ -1566,7 +1566,7 @@ async function doSaveReceipt() {
 function renderReceipts() {
   const el = document.getElementById('receiptsList');
   if (!token) return;
-  const list = filteredReceipts();
+  const list = receipts;
   if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><p>No receipts yet.<br>Scan your first receipt!</p></div>'; return; }
   el.innerHTML = list.map(r => `
     <div class="receipt-item">
