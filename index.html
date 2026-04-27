@@ -865,8 +865,6 @@ function showSignedOut() {
 
 // ── DRIVE FOLDER ──
 async function ensureFolder() {
-  const cached = localStorage.getItem('tb_folder');
-  if (cached) { folderId = cached; return; }
   const res = await driveGet(`files?q=name='TruckBooks' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`);
   if (res.files && res.files.length) { folderId = res.files[0].id; }
   else { const f = await drivePost('files', { name: 'TruckBooks', mimeType: 'application/vnd.google-apps.folder' }); folderId = f.id; }
