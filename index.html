@@ -61,10 +61,10 @@
   .receipt-amount { font-size: 16px; font-weight: 800; color: #2ed573; flex-shrink: 0; margin-left: 8px; }
   .receipt-detail { display: none; padding: 0 14px 14px; border-top: 1px solid #222; }
   .receipt-detail.open { display: block; }
-  .receipt-full-img { width: 100%; border-radius: 8px; margin: 10px 0; max-height: 400px; object-fit: contain; background: #000; touch-action: pinch-zoom; cursor: zoom-in; }
-  .fullimg-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 300; align-items: center; justify-content: center; }
+  .receipt-full-img { width: 100%; border-radius: 8px; margin: 10px 0; max-height: 400px; object-fit: contain; background: #000; cursor: zoom-in; }
+  .fullimg-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 300; align-items: center; justify-content: center; overflow: hidden; }
   .fullimg-overlay.open { display: flex; }
-  .fullimg-overlay img { max-width: 100%; max-height: none; width: 100%; object-fit: contain; touch-action: pinch-zoom; }
+  .fullimg-overlay img { max-width: 100%; max-height: none; width: 100%; object-fit: contain; }
   .fullimg-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .receipt-detail-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #1e1e1e; }
   .receipt-detail-row:last-child { border-bottom: none; }
@@ -1900,12 +1900,40 @@ async function saveBol() {
 }
 
 function openFullImg(src) {
-  document.getElementById('fullImgEl').src = src;
+  const img = document.getElementById('fullImgEl');
+  img.src = src;
+  img.style.transform = 'scale(1)';
+  img.style.transformOrigin = 'center center';
   document.getElementById('fullImgOverlay').classList.add('open');
+  initPinchZoom(img);
 }
 function closeFullImg() {
   document.getElementById('fullImgOverlay').classList.remove('open');
   document.getElementById('fullImgEl').src = '';
+}
+function initPinchZoom(el) {
+  let scale = 1, startDist = 0, startScale = 1;
+  el.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 2) {
+      startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      startScale = scale;
+      e.preventDefault();
+    }
+  }, { passive: false });
+  el.addEventListener('touchmove', function(e) {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      scale = Math.min(Math.max(startScale * (dist / startDist), 1), 5);
+      el.style.transform = 'scale(' + scale + ')';
+      e.preventDefault();
+    }
+  }, { passive: false });
+  el.addEventListener('touchend', function(e) {
+    if (e.touches.length < 2 && scale < 1.1) {
+      scale = 1;
+      el.style.transform = 'scale(1)';
+    }
+  });
 }
 
 function cancelScan() {
