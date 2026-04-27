@@ -247,6 +247,7 @@
     <div class="drawer-item" id="d-eld" onclick="switchTab('eld','nav-eld');closeDrawer()"><span class="d-icon">📋</span> ELD Logs</div>
     <div class="drawer-item" id="d-settlements" onclick="switchTab('settlements','nav-settlements');closeDrawer()"><span class="d-icon">📄</span> Settlements</div>
     <div class="drawer-item" id="d-bol" onclick="switchTab('bol','');closeDrawer()"><span class="d-icon">📦</span> BOL Storage</div>
+    <div class="drawer-item" id="d-export" onclick="switchTab('export','');closeDrawer()"><span class="d-icon">📤</span> Export / Audit Report</div>
     <div class="drawer-title" style="margin-top:16px">Account</div>
     <div class="drawer-item" id="d-settings" onclick="switchTab('settings','nav-settings');closeDrawer()"><span class="d-icon">⚙️</span> Settings</div>
   </div>
@@ -611,6 +612,37 @@
     </div>
   </div>
 
+  <!-- EXPORT TAB -->
+  <div class="section" id="tab-export">
+    <div class="card">
+      <div class="card-title">📤 Export / Audit Report</div>
+      <div class="field">
+        <label>Document Type</label>
+        <select id="exportType" onchange="updateExportCatVisibility()">
+          <option value="receipts">Receipts</option>
+          <option value="settlements">Settlements</option>
+          <option value="eld">ELD Logs</option>
+          <option value="all">All Documents</option>
+        </select>
+      </div>
+      <div class="field" id="exportCatField">
+        <label>Category</label>
+        <select id="exportCat">
+          <option value="all">All Categories</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date Range — From</label>
+        <input type="date" id="exportFrom">
+      </div>
+      <div class="field">
+        <label>Date Range — To</label>
+        <input type="date" id="exportTo">
+      </div>
+      <button class="btn btn-red" onclick="generateExport()">📄 Generate Report</button>
+    </div>
+  </div>
+
   <!-- SETTINGS TAB -->
   <div class="section" id="tab-settings">
     <div class="card">
@@ -942,6 +974,7 @@ function switchTab(name, navId) {
   if (name === 'settlements') renderSettlements();
   if (name === 'bol') renderBols();
   if (name === 'home') renderHome();
+  if (name === 'export') { populateExportCategories(); updateExportCatVisibility(); }
 }
 
 // ── API KEY ──
@@ -1856,7 +1889,125 @@ async function saveBol() {
   } catch(e) { btn.textContent = '💾 Save to Google Drive'; btn.disabled = false; hideLoading(); showToast('Save failed. Try again.'); console.error(e); }
 }
 
-// ── RENDER BOLS ──
+// ── EXPORT / AUDIT REPORT ──
+function updateExportCatVisibility() {
+  const t = document.getElementById('exportType').value;
+  document.getElementById('exportCatField').style.display = (t === 'receipts' || t === 'all') ? 'block' : 'none';
+}
+
+function populateExportCategories() {
+  const cats = new Set(['all']);
+  receipts.forEach(r => { if(r.category) cats.add(r.category); });
+  const sel = document.getElementById('exportCat');
+  sel.innerHTML = '';
+  cats.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c === 'all' ? 'All Categories' : c;
+    sel.appendChild(o);
+  });
+}
+
+function exportDateFilter(dateStr, savedAt, from, to) {
+  const d = parseReceiptDate(dateStr, savedAt);
+  if (from && d < new Date(from)) return false;
+  if (to && d > new Date(to + 'T23:59:59')) return false;
+  return true;
+}
+
+function generateExport() {
+  if (!token) { showToast('Sign in to Google Drive first'); return; }
+  const type = document.getElementById('exportType').value;
+  const cat = document.getElementById('exportCat')?.value || 'all';
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+
+  const dateLabel = (from || to) ? ((from || '—') + ' to ' + (to || '—')) : 'All Time';
+  let html = `<html><head><meta charset="UTF-8"><title>TruckBooks Audit Report</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:20px;max-width:900px;margin:0 auto}
+    h1{font-size:20px;margin-bottom:4px}
+    .sub{font-size:12px;color:#555;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;margin-bottom:24px}
+    th{background:#222;color:#fff;padding:8px 10px;text-align:left;font-size:12px}
+    td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}
+    tr:nth-child(even){background:#f9f9f9}
+    .section-title{font-size:15px;font-weight:bold;margin:20px 0 8px;border-bottom:2px solid #222;padding-bottom:4px}
+    .total{font-weight:bold;font-size:13px;text-align:right;margin-top:4px}
+    .footer{font-size:11px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <h1>🚛 TruckBooks — Audit Report</h1>
+  <div class="sub">Date Range: ${dateLabel} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</div>`;
+
+  // RECEIPTS
+  if (type === 'receipts' || type === 'all') {
+    let list = receipts.filter(r => exportDateFilter(r.date, r.savedAt, from, to));
+    if (cat !== 'all') list = list.filter(r => r.category === cat);
+    const catLabel = cat === 'all' ? 'All Categories' : cat;
+    html += `<div class="section-title">🧾 Receipts — ${catLabel}</div>`;
+    if (!list.length) {
+      html += '<p style="color:#888">No receipts found for this filter.</p>';
+    } else {
+      let total = 0;
+      html += '<table><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Notes</th></tr>';
+      list.forEach(r => {
+        total += parseFloat(r.amount) || 0;
+        html += `<tr><td>${r.date||'—'}</td><td>${r.vendor||'—'}</td><td>${r.category||'—'}</td><td>$${(parseFloat(r.amount)||0).toFixed(2)}</td><td>${r.notes||''}</td></tr>`;
+      });
+      html += '</table>';
+      html += `<div class="total">Total Expenses: $${total.toFixed(2)}</div>`;
+    }
+  }
+
+  // SETTLEMENTS
+  if (type === 'settlements' || type === 'all') {
+    const list = settlements.filter(s => exportDateFilter(s.date, s.savedAt, from, to));
+    html += `<div class="section-title">📄 Settlements</div>`;
+    if (!list.length) {
+      html += '<p style="color:#888">No settlements found for this filter.</p>';
+    } else {
+      let total = 0;
+      html += '<table><tr><th>Date</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th></tr>';
+      list.forEach(s => {
+        const gross = parseFloat(s.gross) || 0;
+        const dedTotal = (s.deductions||[]).reduce((a,d) => a + (parseFloat(d.amount)||0), 0);
+        const net = gross - dedTotal;
+        total += gross;
+        const dedStr = (s.deductions||[]).map(d => d.label + ': $' + (parseFloat(d.amount)||0).toFixed(2)).join(', ');
+        html += `<tr><td>${s.date||'—'}</td><td>$${gross.toFixed(2)}</td><td style="font-size:11px">${dedStr||'—'}</td><td>$${net.toFixed(2)}</td></tr>`;
+      });
+      html += '</table>';
+      html += `<div class="total">Total Gross Income: $${total.toFixed(2)}</div>`;
+    }
+  }
+
+  // ELD LOGS
+  if (type === 'eld' || type === 'all') {
+    const list = eldLogs.filter(e => exportDateFilter(e.date, e.savedAt, from, to));
+    html += `<div class="section-title">📋 ELD Logs</div>`;
+    if (!list.length) {
+      html += '<p style="color:#888">No ELD logs found for this filter.</p>';
+    } else {
+      let totalMiles = 0; let awayDays = 0;
+      html += '<table><tr><th>Date</th><th>Miles</th><th>Away From Home</th></tr>';
+      list.forEach(e => {
+        totalMiles += parseFloat(e.miles) || 0;
+        if (e.awayFromHome) awayDays++;
+        html += `<tr><td>${e.date||'—'}</td><td>${e.miles||'—'}</td><td>${e.awayFromHome ? 'Yes' : 'No'}</td></tr>`;
+      });
+      html += '</table>';
+      html += `<div class="total">Total Miles: ${totalMiles.toLocaleString()} &nbsp;|&nbsp; Away Days: ${awayDays}</div>`;
+    }
+  }
+
+  html += `<div class="footer">Generated by TruckBooks &nbsp;|&nbsp; For tax and audit purposes only</div></body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+
 function renderBols() {
   if (!token) return;
   const el = document.getElementById('bolList');
