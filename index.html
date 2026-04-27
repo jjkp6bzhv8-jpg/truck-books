@@ -1585,7 +1585,7 @@ function renderReceipts() {
         <div class="receipt-amount">$${r.amount.toFixed(2)}</div>
       </div>
       <div class="receipt-detail" id="d${r.id}">
-        ${r.photoThumb ? `<img class="receipt-full-img" src="${r.photoThumb}" onclick="openFullImg(this.src)">` : ''}
+        ${r.photoThumb ? `<img class="receipt-full-img" src="${r.photoThumb}" onclick="event.stopPropagation();openFullImg(this.src)">` : ''}
         ${r.photoFileId ? `<a href="https://drive.google.com/file/d/${r.photoFileId}/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>` : ''}
         <div class="receipt-detail-row"><span class="receipt-detail-label">Vendor</span><span class="receipt-detail-value">${r.vendor}</span></div>
         <div class="receipt-detail-row"><span class="receipt-detail-label">Date</span><span class="receipt-detail-value">${r.date}</span></div>
@@ -1595,7 +1595,7 @@ function renderReceipts() {
         ${r.category === 'Fuel' && r.odometer ? `<div class="receipt-detail-row"><span class="receipt-detail-label">Odometer</span><span class="receipt-detail-value">${r.odometer}</span></div>` : ''}
         ${r.category === 'Fuel' && r.mpg ? `<div class="receipt-detail-row"><span class="receipt-detail-label">MPG This Tank</span><span class="receipt-detail-value" style="color:#2ed573">${r.mpg}</span></div>` : ''}
         <div class="receipt-detail-row"><span class="receipt-detail-label">Notes</span><span class="receipt-detail-value">${r.notes}</span></div>
-        <button class="btn-delete" onclick="delReceipt('${r.id}','${r.photoFileId||''}')">🗑️ Delete</button>
+        <button class="btn-delete" onclick="event.stopPropagation();delReceipt('${r.id}','${r.photoFileId||''}')">🗑️ Delete</button>
       </div>
     </div>`).join('');
 }
