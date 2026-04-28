@@ -1570,7 +1570,7 @@ async function doSaveReceipt() {
     document.body.scrollTop = 0;
   } catch(e) {
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
-    hideLoading(); showToast('ERR: ' + (e && e.message ? e.message : String(e))); console.error(e);
+    hideLoading(); showToast('Save failed. Try again.'); console.error(e);
   }
 }
 
@@ -1611,7 +1611,7 @@ async function confirmDelete() {
   const idToDelete = deleteId;
   closeModal();
   receipts = receipts.filter(r => r.id !== idToDelete);
-  renderReceipts(); renderSummary();
+  renderReceipts(); renderPL();
   showToast('Receipt deleted');
   try { await saveIndex(); } catch(e) { console.error(e); }
 }
@@ -1625,7 +1625,7 @@ async function clearAll() {
     }
     receipts = [];
     await saveIndex();
-    renderReceipts(); renderSummary();
+    renderReceipts(); renderPL();
     hideLoading(); showToast('All receipts cleared');
   } catch(e) { hideLoading(); showToast('Clear failed'); }
 }
@@ -1750,7 +1750,7 @@ function renderHome() {
 function showLoading(m) { document.getElementById('loadingMsg').textContent = m; document.getElementById('loadingOverlay').classList.add('show'); }
 function updateLoading(m) { document.getElementById('loadingMsg').textContent = m; }
 function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
-function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), m.startsWith('ERR:') ? 8000 : 2500); }
+function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
 // ── BOL LOAD / SAVE ──
 async function loadBols() {
