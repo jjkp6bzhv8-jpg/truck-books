@@ -795,6 +795,20 @@ function signIn() {
   window.location.href = url;
 }
 
+function scheduleTokenRefresh(expiresIn) {
+  const refreshIn = Math.max((parseInt(expiresIn) - 300) * 1000, 60000);
+  setTimeout(() => {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPES, prompt: 'none'
+    });
+    iframe.src = url;
+    iframe.onload = () => { try { document.body.removeChild(iframe); } catch(e) {} };
+    document.body.appendChild(iframe);
+  }, refreshIn);
+}
+
 function handleOAuthCallback() {
   const hash = window.location.hash;
   if (hash.includes('access_token')) {
@@ -805,14 +819,19 @@ function handleOAuthCallback() {
       token = t;
       localStorage.setItem('tb_tok', t);
       localStorage.setItem('tb_tok_exp', (Date.now() + parseInt(exp)*1000).toString());
+      scheduleTokenRefresh(exp);
       history.replaceState({}, '', window.location.pathname);
       initDrive(); return;
     }
   }
   const stored = localStorage.getItem('tb_tok');
   const exp = localStorage.getItem('tb_tok_exp');
-  if (stored && exp && Date.now() < parseInt(exp)) { token = stored; initDrive(); }
-  else showSignedOut();
+  if (stored && exp && Date.now() < parseInt(exp)) {
+    token = stored;
+    const remainingSecs = Math.floor((parseInt(exp) - Date.now()) / 1000);
+    scheduleTokenRefresh(remainingSecs);
+    initDrive();
+  } else showSignedOut();
 }
 
 async function initDrive() {
