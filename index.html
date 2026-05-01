@@ -1271,6 +1271,9 @@ async function saveEldLog() {
     document.getElementById('btnHome').className = 'pill-btn';
     hideLoading();
     showToast('ELD Log saved! ✅');
+    // Switch to the year of the log just saved so it shows up immediately
+    const savedYear = parseInt(logDate.split('/')[2]);
+    if (savedYear) eldSelectedYear = savedYear;
     renderEld();
   } catch(e) {
     btn.textContent = '💾 Save Log to Google Drive'; btn.disabled = false;
@@ -1345,7 +1348,11 @@ function closeEldModal() { document.getElementById('deleteEldModal').classList.r
 async function confirmEldDelete() {
   if (!eldDeleteId) return;
   const idToDelete = eldDeleteId;
+  const fileIdToDelete = eldDeleteFileId;
   closeEldModal();
+  if (fileIdToDelete) {
+    try { await fetch(`https://www.googleapis.com/drive/v3/files/${fileIdToDelete}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }); } catch(e) {}
+  }
   eldLogs = eldLogs.filter(l => l.id !== idToDelete);
   renderEld();
   showToast('Log deleted');
