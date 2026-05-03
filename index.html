@@ -373,30 +373,89 @@
       </div>
     </div>
     <div id="scanContent" style="display:none">
-      <div class="card">
-        <div class="card-title">📷 Scan a Receipt</div>
-        <div class="scan-choice">
-          <div class="scan-choice-btn" onclick="document.getElementById('cameraInput').click()">
-            <div class="sc-icon">📷</div>
-            Take Photo
-          </div>
-          <div class="scan-choice-btn" onclick="document.getElementById('libraryInput').click()">
-            <div class="sc-icon">🖼️</div>
-            From Library
-          </div>
-        </div>
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)" style="display:none">
-        <input type="file" id="libraryInput" accept="image/*" onchange="handlePhoto(this)" style="display:none">
-        <img id="receiptPreview" alt="Receipt preview">
-        <div class="spinner" id="spinner">Reading receipt with AI...</div>
-        <div class="ai-result" id="aiResult">
-          <h4>✅ AI Read This Receipt</h4>
-          <div id="aiResultRows"></div>
-        </div>
-        <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save to Google Drive</button>
-        <button class="btn btn-dark" id="cancelScanBtn" onclick="cancelScan()" style="display:none;margin-top:8px">✕ Cancel</button>
+      <!-- Sub-tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div id="subTabReceipts" onclick="switchReceiptSubTab('receipts')" style="flex:1;padding:10px;text-align:center;border-radius:10px;background:#e94560;color:#fff;font-weight:700;font-size:13px;cursor:pointer">🧾 Receipts</div>
+        <div id="subTabMixed" onclick="switchReceiptSubTab('mixed')" style="flex:1;padding:10px;text-align:center;border-radius:10px;background:#1a1a1a;color:#888;font-weight:700;font-size:13px;cursor:pointer;border:1px solid #333">🛒 Mixed</div>
       </div>
-      <div id="receiptsList"></div>
+
+      <!-- REGULAR RECEIPTS PANEL -->
+      <div id="panelReceipts">
+        <div class="card">
+          <div class="card-title">📷 Scan a Receipt</div>
+          <div class="scan-choice">
+            <div class="scan-choice-btn" onclick="document.getElementById('cameraInput').click()">
+              <div class="sc-icon">📷</div>
+              Take Photo
+            </div>
+            <div class="scan-choice-btn" onclick="document.getElementById('libraryInput').click()">
+              <div class="sc-icon">🖼️</div>
+              From Library
+            </div>
+          </div>
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)" style="display:none">
+          <input type="file" id="libraryInput" accept="image/*" onchange="handlePhoto(this)" style="display:none">
+          <img id="receiptPreview" alt="Receipt preview">
+          <div class="spinner" id="spinner">Reading receipt with AI...</div>
+          <div class="ai-result" id="aiResult">
+            <h4>✅ AI Read This Receipt</h4>
+            <div id="aiResultRows"></div>
+          </div>
+          <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save to Google Drive</button>
+          <button class="btn btn-dark" id="cancelScanBtn" onclick="cancelScan()" style="display:none;margin-top:8px">✕ Cancel</button>
+        </div>
+        <div id="receiptsList"></div>
+      </div>
+
+      <!-- MIXED RECEIPTS PANEL -->
+      <div id="panelMixed" style="display:none">
+        <div class="card">
+          <div class="card-title">🛒 Scan a Mixed Receipt</div>
+          <p style="color:#888;font-size:13px;margin-bottom:12px">Walmart, Costco, etc. AI reads each line item and flags business vs personal. You review before saving.</p>
+          <div class="scan-choice">
+            <div class="scan-choice-btn" onclick="document.getElementById('mixedCameraInput').click()">
+              <div class="sc-icon">📷</div>
+              Take Photo
+            </div>
+            <div class="scan-choice-btn" onclick="document.getElementById('mixedLibraryInput').click()">
+              <div class="sc-icon">🖼️</div>
+              From Library
+            </div>
+          </div>
+          <input type="file" id="mixedCameraInput" accept="image/*" capture="environment" onchange="handleMixedPhoto(this)" style="display:none">
+          <input type="file" id="mixedLibraryInput" accept="image/*" onchange="handleMixedPhoto(this)" style="display:none">
+          <img id="mixedPreview" alt="Mixed receipt preview">
+          <div class="spinner" id="mixedSpinner" style="display:none">Reading line items with AI...</div>
+          <div class="ai-result" id="mixedAiResult" style="display:none">
+            <h4>✅ AI Read This Receipt — Review Items</h4>
+            <p style="color:#888;font-size:12px;margin-bottom:8px">Tap any item to flip Business ↔ Personal</p>
+            <div id="mixedLineItems"></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #333">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <span style="color:#888;font-size:13px">Business Total</span>
+                <span id="mixedBusinessTotal" style="color:#2ed573;font-weight:700;font-size:16px">$0.00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+                <span style="color:#888;font-size:13px">Personal Total</span>
+                <span id="mixedPersonalTotal" style="color:#888;font-size:14px">$0.00</span>
+              </div>
+              <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Category</label>
+              <select id="mixedCategory" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px">
+                <option>Fuel</option><option>Truck Maintenance</option><option>Truck Payment</option><option>Insurance</option>
+                <option>Permits &amp; Licensing</option><option>Tolls</option><option>Meals</option><option>Hotel/Lodging</option>
+                <option>Office/Admin</option><option>Phone</option><option>Scales/Weigh Stations</option><option>Truck Supplies</option><option>Other</option>
+              </select>
+              <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:10px;display:block">Vendor</label>
+              <input type="text" id="mixedVendor" placeholder="Vendor name" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px">
+              <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:10px;display:block">Date</label>
+              <input type="date" id="mixedDate" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px">
+            </div>
+          </div>
+          <button class="btn btn-red" id="mixedSaveBtn" onclick="saveMixedReceipt()" style="display:none;margin-top:12px">💾 Save to Google Drive</button>
+          <button class="btn btn-dark" id="mixedCancelBtn" onclick="cancelMixedScan()" style="display:none;margin-top:8px">✕ Cancel</button>
+        </div>
+        <div id="mixedReceiptsList"></div>
+      </div>
     </div>
   </div>
 
@@ -721,6 +780,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="deleteMixedModal">
+  <div class="modal">
+    <h3>Delete This Mixed Receipt?</h3>
+    <p>This permanently removes it from Google Drive.</p>
+    <div class="modal-btns">
+      <button class="btn btn-dark" onclick="closeMixedModal()">Cancel</button>
+      <button class="btn btn-red" onclick="confirmMixedDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="deleteEldModal">
   <div class="modal">
     <h3>Delete This Log?</h3>
@@ -779,6 +849,14 @@ let bolCurrentPhoto = null;
 let bolCurrentResult = null;
 let bolDeleteId = null;
 let bolDeleteFileId = null;
+
+// Mixed Receipt state
+let mixedReceipts = [];
+let mixedCurrentPhotoBlob = null;
+let mixedCurrentPhoto = null;
+let mixedLineItemsData = [];
+let mixedDeleteId = null;
+let mixedDeleteFileId = null;
 
 // ── INIT ──
 window.onload = () => {
@@ -845,6 +923,7 @@ async function initDrive() {
   await loadEldLogs();
   await loadSettlements();
   await loadBols();
+  await loadMixedReceipts();
   renderReceipts(); renderPL(); renderEld(); renderSettlements(); renderBols(); renderHome();
 }
 
@@ -2142,6 +2221,258 @@ async function confirmBolDelete() {
   showToast('BOL deleted');
   try { await saveBolsIndex(); } catch(e) { console.error(e); }
 }
+
+// ── MIXED RECEIPTS ──
+
+function switchReceiptSubTab(tab) {
+  if (tab === 'receipts') {
+    document.getElementById('panelReceipts').style.display = 'block';
+    document.getElementById('panelMixed').style.display = 'none';
+    document.getElementById('subTabReceipts').style.background = '#e94560';
+    document.getElementById('subTabReceipts').style.color = '#fff';
+    document.getElementById('subTabMixed').style.background = '#1a1a1a';
+    document.getElementById('subTabMixed').style.color = '#888';
+  } else {
+    document.getElementById('panelReceipts').style.display = 'none';
+    document.getElementById('panelMixed').style.display = 'block';
+    document.getElementById('subTabReceipts').style.background = '#1a1a1a';
+    document.getElementById('subTabReceipts').style.color = '#888';
+    document.getElementById('subTabMixed').style.background = '#e94560';
+    document.getElementById('subTabMixed').style.color = '#fff';
+    renderMixedReceipts();
+  }
+}
+
+function handleMixedPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    mixedCurrentPhoto = e.target.result;
+    document.getElementById('mixedPreview').src = mixedCurrentPhoto;
+    document.getElementById('mixedPreview').style.display = 'block';
+    document.getElementById('mixedCancelBtn').style.display = 'block';
+    scanMixedWithAI(file);
+  };
+  reader.readAsDataURL(file);
+  mixedCurrentPhotoBlob = file;
+}
+
+async function scanMixedWithAI(file) {
+  const key = localStorage.getItem('tb_key');
+  if (!key) return showToast('Add your API key in Settings first');
+  document.getElementById('mixedSpinner').style.display = 'block';
+  document.getElementById('mixedAiResult').style.display = 'none';
+  document.getElementById('mixedSaveBtn').style.display = 'none';
+
+  const base64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(file); });
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
+          { type: 'text', text: 'Read this mixed receipt (like Walmart or Costco). Extract: vendor name, date (MM/DD/YYYY), and every line item. For each line item determine if it is a business expense or personal. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","category":"Fuel or Truck Maintenance or Truck Supplies or Meals or Office/Admin or Phone or Other","items":[{"name":"item name","amount":"9.99","type":"business or personal"}]}. Be accurate — truck supplies, office supplies, phone accessories, food for the truck = business. Personal clothing, household items, entertainment = personal.' }
+        ]}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content[0].text;
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    mixedLineItemsData = result.items.map((item, i) => ({ ...item, id: i, amount: parseFloat(item.amount) || 0 }));
+
+    document.getElementById('mixedVendor').value = result.vendor || '';
+    document.getElementById('mixedDate').value = result.date ? (() => { const p = result.date.split('/'); return p.length===3 ? p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0') : ''; })() : '';
+    // Set category dropdown
+    const catSel = document.getElementById('mixedCategory');
+    for (let i = 0; i < catSel.options.length; i++) { if (catSel.options[i].value === result.category || catSel.options[i].text === result.category) { catSel.selectedIndex = i; break; } }
+
+    renderMixedLineItems();
+    document.getElementById('mixedSpinner').style.display = 'none';
+    document.getElementById('mixedAiResult').style.display = 'block';
+    document.getElementById('mixedSaveBtn').style.display = 'block';
+  } catch(e) {
+    document.getElementById('mixedSpinner').style.display = 'none';
+    showToast('Could not read receipt. Try again.');
+    console.error(e);
+  }
+}
+
+function renderMixedLineItems() {
+  let bizTotal = 0, persTotal = 0;
+  let html = '';
+  mixedLineItemsData.forEach(item => {
+    const isBiz = item.type === 'business';
+    if (isBiz) bizTotal += item.amount; else persTotal += item.amount;
+    html += `<div onclick="toggleMixedItem(${item.id})" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #222;cursor:pointer">
+      <div>
+        <div style="font-size:14px;color:#f0f0f0">${item.name}</div>
+        <div style="font-size:11px;margin-top:2px;color:${isBiz ? '#2ed573' : '#888'}">${isBiz ? '✅ Business' : '👤 Personal'}</div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:${isBiz ? '#2ed573' : '#888'}">$${item.amount.toFixed(2)}</div>
+    </div>`;
+  });
+  document.getElementById('mixedLineItems').innerHTML = html;
+  document.getElementById('mixedBusinessTotal').textContent = '$' + bizTotal.toFixed(2);
+  document.getElementById('mixedPersonalTotal').textContent = '$' + persTotal.toFixed(2);
+}
+
+function toggleMixedItem(id) {
+  const item = mixedLineItemsData.find(i => i.id === id);
+  if (!item) return;
+  item.type = item.type === 'business' ? 'personal' : 'business';
+  renderMixedLineItems();
+}
+
+function cancelMixedScan() {
+  mixedCurrentPhoto = null;
+  mixedCurrentPhotoBlob = null;
+  mixedLineItemsData = [];
+  document.getElementById('mixedPreview').style.display = 'none';
+  document.getElementById('mixedPreview').src = '';
+  document.getElementById('mixedAiResult').style.display = 'none';
+  document.getElementById('mixedSaveBtn').style.display = 'none';
+  document.getElementById('mixedCancelBtn').style.display = 'none';
+  document.getElementById('mixedSpinner').style.display = 'none';
+  document.getElementById('mixedCameraInput').value = '';
+  document.getElementById('mixedLibraryInput').value = '';
+}
+
+async function saveMixedReceipt() {
+  if (!mixedCurrentPhotoBlob) return showToast('Take a photo first');
+  const vendor = document.getElementById('mixedVendor').value || 'Unknown';
+  const dateRaw = document.getElementById('mixedDate').value;
+  const date = dateRaw ? (() => { const p = dateRaw.split('-'); return p[1]+'/'+p[2]+'/'+p[0]; })() : '';
+  const category = document.getElementById('mixedCategory').value;
+  const bizItems = mixedLineItemsData.filter(i => i.type === 'business');
+  const bizTotal = bizItems.reduce((s, i) => s + i.amount, 0);
+  if (bizTotal <= 0) return showToast('No business items selected');
+
+  showLoading('Saving to Google Drive...');
+  try {
+    // Compress photo
+    const compressed = await new Promise(res => {
+      const img = new Image(); img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const max = 1200; let w = img.width, h = img.height;
+        if (w > max) { h = h * max / w; w = max; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        res(canvas.toDataURL('image/jpeg', 0.7));
+      }; img.src = mixedCurrentPhoto;
+    });
+
+    // Upload photo
+    const photoBlob = await fetch(compressed).then(r => r.blob());
+    const photoName = `mixed_${Date.now()}.jpg`;
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({ name: photoName, parents: [folderId], permissions: [{ role: 'reader', type: 'anyone' }] })], { type: 'application/json' }));
+    form.append('file', photoBlob);
+    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form }).then(r => r.json());
+    try { await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }); } catch(e) {}
+
+    const id = 'mx_' + Date.now();
+    mixedReceipts.unshift({ id, vendor, date, amount: parseFloat(bizTotal.toFixed(2)), category, items: mixedLineItemsData, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
+    await saveMixedIndex();
+    hideLoading();
+    showToast('Mixed receipt saved! ✅');
+    cancelMixedScan();
+    renderMixedReceipts();
+  } catch(e) {
+    hideLoading();
+    showToast('Save failed. Try again.');
+    console.error(e);
+  }
+}
+
+async function loadMixedReceipts() {
+  try {
+    const res = await driveGet(`files?q='${folderId}' in parents and name='mixed_receipts.json' and trashed=false&fields=files(id)`);
+    if (res.files && res.files.length) {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+      mixedReceipts = await r.json();
+    }
+  } catch(e) { mixedReceipts = []; }
+}
+
+async function saveMixedIndex() {
+  const content = JSON.stringify(mixedReceipts);
+  const blob = new Blob([content], { type: 'application/json' });
+  const res = await driveGet(`files?q='${folderId}' in parents and name='mixed_receipts.json' and trashed=false&fields=files(id)`);
+  if (res.files && res.files.length) {
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, { method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob });
+  } else {
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({ name: 'mixed_receipts.json', parents: [folderId] })], { type: 'application/json' }));
+    form.append('file', blob);
+    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+  }
+}
+
+function renderMixedReceipts() {
+  const el = document.getElementById('mixedReceiptsList');
+  if (!el) return;
+  if (!mixedReceipts.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><p>No mixed receipts yet.<br>Scan your first mixed receipt!</p></div>'; return; }
+  const sorted = [...mixedReceipts].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  el.innerHTML = sorted.map(r => `
+    <div class="receipt-item" id="mx_${r.id}">
+      <div class="receipt-header" onclick="toggleMixedReceiptExpand('${r.id}')">
+        <div class="receipt-info">
+          <div class="receipt-vendor">🛒 ${r.vendor}</div>
+          <div class="receipt-meta">${r.date} · ${r.category}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="receipt-amount">$${parseFloat(r.amount).toFixed(2)}</div>
+          <button class="delete-btn" onclick="event.stopPropagation();delMixedReceipt('${r.id}','${r.photoFileId}')">🗑️</button>
+        </div>
+      </div>
+      <div class="receipt-detail" id="mxd_${r.id}" style="display:none">
+        ${r.photoThumb ? `<img src="${r.photoThumb}" style="width:100%;border-radius:8px;margin-bottom:12px;cursor:pointer" onclick="event.stopPropagation();openFullscreen('${r.photoThumb}')">` : ''}
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Business Total</span><span class="receipt-detail-value" style="color:#2ed573">$${parseFloat(r.amount).toFixed(2)}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Category</span><span class="receipt-detail-value">${r.category}</span></div>
+        <div style="margin-top:10px"><div style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Line Items</div>
+        ${(r.items||[]).map(item => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222"><span style="font-size:13px;color:${item.type==='business'?'#f0f0f0':'#555'}">${item.name} <span style="font-size:11px;color:${item.type==='business'?'#2ed573':'#555'}">${item.type==='business'?'✅':'👤'}</span></span><span style="font-size:13px;color:${item.type==='business'?'#f0f0f0':'#555'}">$${parseFloat(item.amount).toFixed(2)}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleMixedReceiptExpand(id) {
+  const detail = document.getElementById('mxd_' + id);
+  if (!detail) return;
+  detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+}
+
+function delMixedReceipt(id, fid) {
+  mixedDeleteId = id; mixedDeleteFileId = fid;
+  document.getElementById('deleteMixedModal').classList.add('open');
+}
+
+function closeMixedModal() {
+  document.getElementById('deleteMixedModal').classList.remove('open');
+  mixedDeleteId = null; mixedDeleteFileId = null;
+}
+
+async function confirmMixedDelete() {
+  if (!mixedDeleteId) return;
+  const idToDelete = mixedDeleteId;
+  const fileIdToDelete = mixedDeleteFileId;
+  closeMixedModal();
+  if (fileIdToDelete) {
+    try { await fetch(`https://www.googleapis.com/drive/v3/files/${fileIdToDelete}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }); } catch(e) {}
+  }
+  mixedReceipts = mixedReceipts.filter(r => r.id !== idToDelete);
+  renderMixedReceipts();
+  showToast('Mixed receipt deleted');
+  try { await saveMixedIndex(); } catch(e) { console.error(e); }
+}
+
 </script>
 </body>
 </html>
