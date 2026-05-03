@@ -1672,7 +1672,7 @@ function renderSettlements() {
       return '<div class="deduction-row"><span class="deduction-label">' + d.label + (d.category ? ' <span style="color:#555;font-size:11px">['+d.category+']</span>' : '') + '</span><span class="' + (d.skip?'deduction-skipped':'deduction-value') + '">' + (d.skip?'skipped (fuel)':'-$'+parseFloat(d.amount||0).toFixed(2)) + '</span></div>';
     }).join('');
     return '<div class="settlement-item">'
-      + '<div class="settlement-header" onclick="toggleSettlement('sd' + s.id + '')">'
+      + '<div class="settlement-header" onclick="toggleSettlement(\'sd' + s.id + '\')">'
       + '<div class="settlement-info"><div class="settlement-date">' + s.date + typeLabel + '</div>'
       + '<div class="settlement-meta">' + counted.length + ' deduction' + (counted.length!==1?'s':'') + ' · Net $' + (s.net||0).toFixed(2) + '</div></div>'
       + '<div class="settlement-gross">$' + (s.gross||0).toFixed(2) + '</div></div>'
@@ -1681,7 +1681,7 @@ function renderSettlements() {
       + '<div class="deduction-row"><span class="deduction-label">Gross Pay</span><span style="color:#2ed573;font-weight:700">$' + (s.gross||0).toFixed(2) + '</span></div>'
       + deductionRows
       + '<div class="deduction-row" style="border-top:1px solid #333;margin-top:4px"><span style="color:#f0f0f0;font-weight:700">Net</span><span style="color:#2ed573;font-weight:700">$' + (s.net||0).toFixed(2) + '</span></div>'
-      + '<button class="btn-delete" onclick="delSettlement('' + s.id + '')">🗑️ Delete</button>'
+      + '<button class="btn-delete" onclick="delSettlement(\'' + s.id + '\')">🗑️ Delete</button>'
       + '</div></div>';
   }).join('');
 }
