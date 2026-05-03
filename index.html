@@ -531,7 +531,19 @@
         <input type="file" id="settlementLibraryInput" accept="image/*" onchange="handleSettlementPhoto(this)" style="display:none">
 
         <!-- Add another page button -->
-        <button class="btn btn-dark" id="settlementAddPageBtn" onclick="addSettlementPage()" style="display:none;margin-bottom:12px">➕ Add Another Page</button>
+        <div id="settlementAddPageBtn" style="display:none;margin-bottom:12px">
+          <div style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">➕ Add Another Page</div>
+          <div style="display:flex;gap:8px">
+            <div class="scan-choice-btn" onclick="document.getElementById('settlementCameraInput').click()" style="padding:10px">
+              <div class="sc-icon" style="font-size:20px">📷</div>
+              Camera
+            </div>
+            <div class="scan-choice-btn" onclick="document.getElementById('settlementLibraryInput').click()" style="padding:10px">
+              <div class="sc-icon" style="font-size:20px">🖼️</div>
+              Library
+            </div>
+          </div>
+        </div>
 
         <div class="spinner" id="settlementSpinner">AI reading settlement sheet...</div>
         <div class="eld-ai-result" id="settlementAiResult">
