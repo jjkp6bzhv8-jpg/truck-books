@@ -498,10 +498,29 @@
     <div id="settlementsContent">
       <div class="card">
         <div class="card-title">📄 Add Settlement Sheet</div>
+
+        <!-- Weekly vs Catch-up toggle -->
+        <div style="margin-bottom:14px">
+          <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px">Settlement Type</label>
+          <div style="display:flex;gap:8px">
+            <div id="stToggleWeekly" onclick="setSettlementType('weekly')" style="flex:1;padding:10px;text-align:center;border-radius:10px;background:#e94560;color:#fff;font-weight:700;font-size:13px;cursor:pointer">📅 Weekly</div>
+            <div id="stToggleCatchup" onclick="setSettlementType('catchup')" style="flex:1;padding:10px;text-align:center;border-radius:10px;background:#1a1a1a;color:#888;font-weight:700;font-size:13px;cursor:pointer;border:1px solid #333">📆 Catch-up (YTD)</div>
+          </div>
+          <p id="stTypeNote" style="color:#888;font-size:12px;margin-top:8px">Weekly: reads current week gross. Use for Swift and regular weekly settlements.</p>
+        </div>
+
+        <!-- Page counter -->
+        <div id="settlementPageCounter" style="display:none;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;margin-bottom:12px;text-align:center">
+          <span style="color:#e94560;font-weight:700" id="settlementPageCount">1</span> <span style="color:#888;font-size:13px">page(s) scanned</span>
+        </div>
+
+        <!-- Scanned pages thumbnails -->
+        <div id="settlementPageThumbs" style="display:none;margin-bottom:12px;overflow-x:auto;white-space:nowrap"></div>
+
         <div class="scan-choice">
           <div class="scan-choice-btn" onclick="document.getElementById('settlementCameraInput').click()">
             <div class="sc-icon">📷</div>
-            Take Photo
+            <span id="settlementScanLabel">Take Photo</span>
           </div>
           <div class="scan-choice-btn" onclick="document.getElementById('settlementLibraryInput').click()">
             <div class="sc-icon">🖼️</div>
@@ -510,14 +529,17 @@
         </div>
         <input type="file" id="settlementCameraInput" accept="image/*" capture="environment" onchange="handleSettlementPhoto(this)" style="display:none">
         <input type="file" id="settlementLibraryInput" accept="image/*" onchange="handleSettlementPhoto(this)" style="display:none">
-        <img id="settlementPreview" alt="Settlement preview" style="width:100%;border-radius:8px;margin-bottom:12px;display:none;max-height:300px;object-fit:contain;background:#000;">
-        <button class="btn btn-dark" id="settlementRetakeBtn" onclick="retakeSettlementPhoto()" style="display:none;margin-bottom:12px">🔄 Retake / Choose Again</button>
+
+        <!-- Add another page button -->
+        <button class="btn btn-dark" id="settlementAddPageBtn" onclick="addSettlementPage()" style="display:none;margin-bottom:12px">➕ Add Another Page</button>
+
         <div class="spinner" id="settlementSpinner">AI reading settlement sheet...</div>
         <div class="eld-ai-result" id="settlementAiResult">
           <h4>✅ AI Read This Settlement</h4>
           <div id="settlementAiRows"></div>
         </div>
         <button class="btn btn-red" id="settlementSaveBtn" onclick="saveSettlement()" style="display:none">💾 Save to Google Drive</button>
+        <button class="btn btn-dark" id="settlementCancelBtn" onclick="cancelSettlementScan()" style="display:none;margin-top:8px">✕ Cancel</button>
       </div>
       <div class="disclaimer">
         <p>⚠️ Fuel deductions on settlement sheets are skipped automatically since you log fuel receipts separately.</p>
@@ -841,6 +863,8 @@ let settlements = [];
 let settlementCurrentPhotoBlob = null;
 let settlementCurrentPhoto = null;
 let settlementCurrentResult = null;
+let settlementPages = [];
+let settlementType = 'weekly';
 
 // BOL state
 let bols = [];
@@ -1466,56 +1490,99 @@ async function saveSettlementsIndex() {
 }
 
 // ── SETTLEMENT PHOTO ──
+function setSettlementType(type) {
+  settlementType = type;
+  if (type === 'weekly') {
+    document.getElementById('stToggleWeekly').style.background = '#e94560';
+    document.getElementById('stToggleWeekly').style.color = '#fff';
+    document.getElementById('stToggleCatchup').style.background = '#1a1a1a';
+    document.getElementById('stToggleCatchup').style.color = '#888';
+    document.getElementById('stTypeNote').textContent = 'Weekly: reads current week gross. Use for Swift and regular weekly settlements.';
+  } else {
+    document.getElementById('stToggleCatchup').style.background = '#e94560';
+    document.getElementById('stToggleCatchup').style.color = '#fff';
+    document.getElementById('stToggleWeekly').style.background = '#1a1a1a';
+    document.getElementById('stToggleWeekly').style.color = '#888';
+    document.getElementById('stTypeNote').textContent = 'Catch-up (YTD): reads year-to-date gross. Use when entering past settlements you are missing.';
+  }
+}
+
 function handleSettlementPhoto(input) {
   const file = input.files[0];
   if (!file) return;
-  settlementCurrentPhotoBlob = file;
   const reader = new FileReader();
   reader.onload = e => {
-    settlementCurrentPhoto = e.target.result;
-    const img = document.getElementById('settlementPreview');
-    img.src = settlementCurrentPhoto; img.style.display = 'block';
-    document.getElementById('settlementRetakeBtn').style.display = 'block';
-    document.getElementById('settlementAiResult').style.display = 'none';
-    document.getElementById('settlementSaveBtn').style.display = 'none';
-    scanSettlementWithAI(file);
+    // Add page to array
+    settlementPages.push({ blob: file, dataUrl: e.target.result });
+    updateSettlementPageUI();
+    // If first page, show preview of first page; else keep showing count
+    if (settlementPages.length === 1) {
+      settlementCurrentPhoto = e.target.result;
+      settlementCurrentPhotoBlob = file;
+    }
+    document.getElementById('settlementCancelBtn').style.display = 'block';
+    document.getElementById('settlementAddPageBtn').style.display = 'block';
+    document.getElementById('settlementScanLabel').textContent = 'Add Page';
+    // Auto-process when page added
+    processAllSettlementPages();
   };
   reader.readAsDataURL(file);
   input.value = '';
 }
 
-function retakeSettlementPhoto() {
-  settlementCurrentPhoto = null; settlementCurrentPhotoBlob = null; settlementCurrentResult = null;
-  document.getElementById('settlementPreview').style.display = 'none';
-  document.getElementById('settlementRetakeBtn').style.display = 'none';
-  document.getElementById('settlementAiResult').style.display = 'none';
-  document.getElementById('settlementSaveBtn').style.display = 'none';
+function updateSettlementPageUI() {
+  const count = settlementPages.length;
+  document.getElementById('settlementPageCounter').style.display = 'block';
+  document.getElementById('settlementPageCount').textContent = count;
+  // Show thumbnails
+  const thumbs = document.getElementById('settlementPageThumbs');
+  thumbs.style.display = 'block';
+  thumbs.innerHTML = settlementPages.map((p, i) =>
+    `<img src="${p.dataUrl}" style="height:80px;border-radius:6px;margin-right:8px;border:2px solid #e94560;display:inline-block;object-fit:cover">`
+  ).join('');
 }
 
-async function scanSettlementWithAI(file) {
+function addSettlementPage() {
+  document.getElementById('settlementCameraInput').click();
+}
+
+async function processAllSettlementPages() {
   const key = localStorage.getItem('tb_key');
   if (!key) { showToast('Add your API key in Settings'); return; }
   document.getElementById('settlementSpinner').style.display = 'block';
-  const b64 = await compress(file, 1000, 0.8);
+  document.getElementById('settlementAiResult').style.display = 'none';
+  document.getElementById('settlementSaveBtn').style.display = 'none';
+
+  // Build content array with all pages
+  const content_parts = [];
+  for (const page of settlementPages) {
+    const b64 = await compress(page.blob, 1000, 0.8);
+    content_parts.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }});
+  }
+
+  const grossInstruction = settlementType === 'catchup'
+    ? 'Read the YEAR-TO-DATE (YTD) gross earnings total — this is the catch-up/YTD mode.'
+    : 'Read the CURRENT WEEK gross earnings only — do NOT use YTD totals.';
+
+  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet with ${settlementPages.length} page(s). ${grossInstruction} Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Bobtail Insurance","amount":"45.00","category":"Insurance","skip":false},{"label":"Fuel Purchase","amount":"200.00","category":"Fuel","skip":true}]}. Rules: 1) date is the check date or period end date. 2) For deductions, set skip:true only for fuel-related items (fuel purchase, fuel advance, fuel charge, DEF, IFTA) since those are logged separately as receipts. 3) Map each deduction to one of these categories: Insurance, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other. 4) Include ALL non-fuel deductions. 5) Use the correct gross based on the instruction above.` });
+
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 800, messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
-        { type: 'text', text: 'This is a truck driver settlement sheet. Read it carefully. Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Insurance","amount":"45.00","skip":false},{"label":"Fuel Advance","amount":"200.00","skip":true}]}. Rules: 1) date is the settlement period end date. 2) gross is total gross pay before deductions. 3) For each deduction line, set skip:true if it is fuel-related (fuel advance, fuel charge, fuel deduction, DEF, etc) because the driver logs fuel receipts separately. Set skip:false for all other deductions like insurance, truck payment, escrow, occupational accident, physical damage, permits, etc.' }
-      ]}]})
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 2000, messages: [{ role: 'user', content: content_parts }]})
     });
     const d = await r.json();
     settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
     const skipped = settlementCurrentResult.deductions.filter(d => d.skip);
     const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
-    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount), 0);
+    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount||0), 0);
     const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
+    const typeLabel = settlementType === 'catchup' ? ' (YTD Catch-up)' : '';
     document.getElementById('settlementAiRows').innerHTML = `
-      <div class="result-row"><span class="result-label">Period</span><span class="result-value">${settlementCurrentResult.date}</span></div>
+      <div class="result-row"><span class="result-label">Period</span><span class="result-value">${settlementCurrentResult.date}${typeLabel}</span></div>
       <div class="result-row"><span class="result-label">Gross Pay</span><span class="result-value" style="color:#2ed573">$${parseFloat(settlementCurrentResult.gross).toFixed(2)}</span></div>
-      ${counted.map(d=>`<div class="result-row"><span class="result-label">${d.label}</span><span class="result-value" style="color:#e94560">-$${parseFloat(d.amount).toFixed(2)}</span></div>`).join('')}
+      ${counted.map(d=>`<div class="result-row"><span class="result-label">${d.label} <span style="color:#555;font-size:11px">[${d.category}]</span></span><span class="result-value" style="color:#e94560">-$${parseFloat(d.amount||0).toFixed(2)}</span></div>`).join('')}
       ${skipped.map(d=>`<div class="result-row"><span class="result-label">${d.label}</span><span class="result-value deduction-skipped">skipped (fuel logged separately)</span></div>`).join('')}
       <div class="result-row" style="border-top:1px solid #333;margin-top:4px;padding-top:8px"><span class="result-label" style="color:#f0f0f0;font-weight:700">Net After Deductions</span><span class="result-value" style="color:#2ed573;font-size:16px">$${net.toFixed(2)}</span></div>`;
     document.getElementById('settlementAiResult').style.display = 'block';
@@ -1524,15 +1591,38 @@ async function scanSettlementWithAI(file) {
   document.getElementById('settlementSpinner').style.display = 'none';
 }
 
+function cancelSettlementScan() {
+  settlementPages = [];
+  settlementCurrentPhoto = null;
+  settlementCurrentPhotoBlob = null;
+  settlementCurrentResult = null;
+  document.getElementById('settlementPageCounter').style.display = 'none';
+  document.getElementById('settlementPageThumbs').style.display = 'none';
+  document.getElementById('settlementPageThumbs').innerHTML = '';
+  document.getElementById('settlementAiResult').style.display = 'none';
+  document.getElementById('settlementSaveBtn').style.display = 'none';
+  document.getElementById('settlementCancelBtn').style.display = 'none';
+  document.getElementById('settlementAddPageBtn').style.display = 'none';
+  document.getElementById('settlementSpinner').style.display = 'none';
+  document.getElementById('settlementScanLabel').textContent = 'Take Photo';
+  document.getElementById('settlementCameraInput').value = '';
+  document.getElementById('settlementLibraryInput').value = '';
+}
+
+function retakeSettlementPhoto() {
+  cancelSettlementScan();
+}
+
 async function saveSettlement() {
-  if (!settlementCurrentResult || !settlementCurrentPhoto) return;
+  if (!settlementCurrentResult || !settlementPages.length) return;
   if (!token) { showToast('Sign in to Google Drive first'); return; }
   const btn = document.getElementById('settlementSaveBtn');
   btn.textContent = 'Saving...'; btn.disabled = true;
   showLoading('Uploading settlement to Google Drive...');
   try {
     const id = Date.now().toString();
-    const compressed = await compress(settlementCurrentPhotoBlob, 1200, 0.75);
+    // Upload first page as the main photo
+    const compressed = await compress(settlementPages[0].blob, 1200, 0.75);
     const photoBlob = await fetch(compressed).then(r => r.blob());
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: `settlement_${id}.jpg`, parents: [folderId] })], { type: 'application/json' }));
@@ -1546,15 +1636,23 @@ async function saveSettlement() {
     });
     updateLoading('Saving settlement record...');
     const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
-    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount), 0);
+    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount||0), 0);
     const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
-    settlements.unshift({ id, date: settlementCurrentResult.date, gross: parseFloat(settlementCurrentResult.gross), deductions: settlementCurrentResult.deductions, net, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
+    settlements.unshift({
+      id,
+      date: settlementCurrentResult.date,
+      gross: parseFloat(settlementCurrentResult.gross),
+      deductions: settlementCurrentResult.deductions,
+      net,
+      settlementType,
+      pageCount: settlementPages.length,
+      photoFileId: up.id,
+      photoThumb: compressed,
+      savedAt: new Date().toISOString()
+    });
     settlements.sort((a,b) => new Date(b.date) - new Date(a.date));
     await saveSettlementsIndex();
-    settlementCurrentPhoto = null; settlementCurrentPhotoBlob = null; settlementCurrentResult = null;
-    document.getElementById('settlementPreview').style.display = 'none';
-    document.getElementById('settlementRetakeBtn').style.display = 'none';
-    document.getElementById('settlementAiResult').style.display = 'none';
+    cancelSettlementScan();
     btn.style.display = 'none'; btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
     hideLoading(); showToast('Settlement saved! ✅');
     renderSettlements(); renderPL();
@@ -1566,23 +1664,24 @@ function renderSettlements() {
   const el = document.getElementById('settlementsList');
   if (!settlements.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><p>No settlements yet.<br>Scan your first settlement sheet!</p></div>'; return; }
   el.innerHTML = settlements.map(function(s) {
-    const counted = s.deductions.filter(function(d) { return !d.skip; });
+    const counted = (s.deductions||[]).filter(function(d) { return !d.skip; });
     const photoImg = s.photoThumb ? '<img class="receipt-full-img" src="' + s.photoThumb + '">' : '';
     const photoLink = s.photoFileId ? '<a href="https://drive.google.com/file/d/' + s.photoFileId + '/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>' : '';
-    const deductionRows = s.deductions.map(function(d) {
-      return '<div class="deduction-row"><span class="deduction-label">' + d.label + '</span><span class="' + (d.skip?'deduction-skipped':'deduction-value') + '">' + (d.skip?'skipped (fuel)':'-$'+parseFloat(d.amount).toFixed(2)) + '</span></div>';
+    const typeLabel = s.settlementType === 'catchup' ? ' <span style="color:#e94560;font-size:11px">[YTD]</span>' : '';
+    const deductionRows = (s.deductions||[]).map(function(d) {
+      return '<div class="deduction-row"><span class="deduction-label">' + d.label + (d.category ? ' <span style="color:#555;font-size:11px">['+d.category+']</span>' : '') + '</span><span class="' + (d.skip?'deduction-skipped':'deduction-value') + '">' + (d.skip?'skipped (fuel)':'-$'+parseFloat(d.amount||0).toFixed(2)) + '</span></div>';
     }).join('');
     return '<div class="settlement-item">'
-      + '<div class="settlement-header" onclick="toggleSettlement(\'sd' + s.id + '\')">'
-      + '<div class="settlement-info"><div class="settlement-date">' + s.date + '</div>'
-      + '<div class="settlement-meta">' + counted.length + ' deduction' + (counted.length!==1?'s':'') + ' · Net $' + s.net.toFixed(2) + '</div></div>'
-      + '<div class="settlement-gross">$' + s.gross.toFixed(2) + '</div></div>'
+      + '<div class="settlement-header" onclick="toggleSettlement('sd' + s.id + '')">'
+      + '<div class="settlement-info"><div class="settlement-date">' + s.date + typeLabel + '</div>'
+      + '<div class="settlement-meta">' + counted.length + ' deduction' + (counted.length!==1?'s':'') + ' · Net $' + (s.net||0).toFixed(2) + '</div></div>'
+      + '<div class="settlement-gross">$' + (s.gross||0).toFixed(2) + '</div></div>'
       + '<div class="settlement-detail" id="sd' + s.id + '">'
       + photoImg + photoLink
-      + '<div class="deduction-row"><span class="deduction-label">Gross Pay</span><span style="color:#2ed573;font-weight:700">$' + s.gross.toFixed(2) + '</span></div>'
+      + '<div class="deduction-row"><span class="deduction-label">Gross Pay</span><span style="color:#2ed573;font-weight:700">$' + (s.gross||0).toFixed(2) + '</span></div>'
       + deductionRows
-      + '<div class="deduction-row" style="border-top:1px solid #333;margin-top:4px"><span style="color:#f0f0f0;font-weight:700">Net</span><span style="color:#2ed573;font-weight:700">$' + s.net.toFixed(2) + '</span></div>'
-      + '<button class="btn-delete" onclick="delSettlement(\'' + s.id + '\')">🗑️ Delete</button>'
+      + '<div class="deduction-row" style="border-top:1px solid #333;margin-top:4px"><span style="color:#f0f0f0;font-weight:700">Net</span><span style="color:#2ed573;font-weight:700">$' + (s.net||0).toFixed(2) + '</span></div>'
+      + '<button class="btn-delete" onclick="delSettlement('' + s.id + '')">🗑️ Delete</button>'
       + '</div></div>';
   }).join('');
 }
@@ -1596,6 +1695,7 @@ async function delSettlement(id) {
   showToast('Settlement deleted');
   try { await saveSettlementsIndex(); } catch(e) { console.error(e); }
 }
+
 function compress(file, max, q) {
   return new Promise(res => {
     const img = new Image();
@@ -1801,10 +1901,30 @@ function renderPL() {
   const rList = filteredReceipts();
   const sList = filteredSettlements();
   const totalIncome = sList.reduce((s,r) => s + r.gross, 0);
-  const totalExpenses = rList.reduce((s,r) => s + r.amount, 0);
+
+  // Receipt expenses
+  const receiptExpenses = rList.reduce((s,r) => s + r.amount, 0);
+
+  // Settlement deduction expenses (non-fuel)
+  const settlementDeductionTotal = sList.reduce((s, sv) => {
+    return s + (sv.deductions||[]).filter(d=>!d.skip).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+  }, 0);
+
+  const totalExpenses = receiptExpenses + settlementDeductionTotal;
   const netProfit = totalIncome - totalExpenses;
+
+  // Build category map from receipts
   const cats = {};
   rList.forEach(r => { cats[r.category] = (cats[r.category]||0) + r.amount; });
+
+  // Add settlement deductions into category map
+  sList.forEach(sv => {
+    (sv.deductions||[]).filter(d=>!d.skip).forEach(d => {
+      const cat = d.category || 'Other';
+      cats[cat] = (cats[cat]||0) + parseFloat(d.amount||0);
+    });
+  });
+
   const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
   const el = document.getElementById('plContent');
 
@@ -1813,18 +1933,20 @@ function renderPL() {
     let rows = '';
     sorted.forEach(function(entry) {
       const cat = entry[0], amt = entry[1];
-      const pct = Math.round(amt/totalExpenses*100);
+      const pct = totalExpenses > 0 ? Math.round(amt/totalExpenses*100) : 0;
       const n = rList.filter(r=>r.category===cat).length;
-      rows += '<div class="cat-row"><div style="flex:1"><div class="cat-name">' + cat + '</div><div class="cat-count">' + n + ' receipt' + (n!==1?'s':'') + ' \u00b7 ' + pct + '%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%"></div></div></div><div class="cat-amount">$' + amt.toFixed(2) + '</div></div>';
+      const fromSettlements = sList.reduce((s,sv)=>s+(sv.deductions||[]).filter(d=>!d.skip&&(d.category||'Other')===cat).length,0);
+      const sourceNote = (n > 0 && fromSettlements > 0) ? (n+' receipt'+(n!==1?'s':'')+' + '+fromSettlements+' deduction'+(fromSettlements!==1?'s':'')) : fromSettlements > 0 ? fromSettlements+' settlement deduction'+(fromSettlements!==1?'s':'') : n+' receipt'+(n!==1?'s':'');
+      rows += '<div class="cat-row"><div style="flex:1"><div class="cat-name">' + cat + '</div><div class="cat-count">' + sourceNote + ' · ' + pct + '%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%"></div></div></div><div class="cat-amount">$' + amt.toFixed(2) + '</div></div>';
     });
     catRows = '<div class="card"><div class="card-title">Expenses by Category</div>' + rows + '</div>';
   }
 
   el.innerHTML = '<div class="pl-box pl-income"><div class="pl-label">Total Income (Gross Settlements)</div><div class="pl-amount green">$' + totalIncome.toFixed(2) + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + sList.length + ' settlement' + (sList.length!==1?'s':'') + '</div></div>'
-    + '<div class="pl-box pl-expense"><div class="pl-label">Total Expenses (Receipts)</div><div class="pl-amount red">$' + totalExpenses.toFixed(2) + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + rList.length + ' receipt' + (rList.length!==1?'s':'') + '</div></div>'
+    + '<div class="pl-box pl-expense"><div class="pl-label">Total Expenses</div><div class="pl-amount red">$' + totalExpenses.toFixed(2) + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + rList.length + ' receipt' + (rList.length!==1?'s':'') + ' + settlement deductions</div></div>'
     + '<div class="pl-box pl-net"><div class="pl-label">Net Profit / Loss</div><div class="pl-amount ' + (netProfit>=0?'profit':'loss') + '">$' + Math.abs(netProfit).toFixed(2) + ' ' + (netProfit>=0?'▲':'▼') + '</div><div style="font-size:12px;color:#555;margin-top:4px">' + (netProfit>=0?'Profit':'Loss') + '</div></div>'
     + catRows
-    + '<div class="card"><div class="card-title">📋 Audit Summary</div><p style="font-size:13px;color:#666;line-height:1.8">Gross income: <strong style="color:#2ed573">$' + totalIncome.toFixed(2) + '</strong><br>Total expenses: <strong style="color:#e94560">$' + totalExpenses.toFixed(2) + '</strong><br>Net: <strong style="color:' + (netProfit>=0?'#2ed573':'#e94560') + '">$' + Math.abs(netProfit).toFixed(2) + ' ' + (netProfit>=0?'profit':'loss') + '</strong><br>Receipts on file: <strong style="color:#f0f0f0">' + rList.length + '</strong><br>Settlements on file: <strong style="color:#f0f0f0">' + sList.length + '</strong><br>Storage: <strong style="color:#2ed573">Google Drive</strong></p></div>';
+    + '<div class="card"><div class="card-title">📋 Audit Summary</div><p style="font-size:13px;color:#666;line-height:1.8">Gross income: <strong style="color:#2ed573">$' + totalIncome.toFixed(2) + '</strong><br>Receipt expenses: <strong style="color:#e94560">$' + receiptExpenses.toFixed(2) + '</strong><br>Settlement deductions: <strong style="color:#e94560">$' + settlementDeductionTotal.toFixed(2) + '</strong><br>Net: <strong style="color:' + (netProfit>=0?'#2ed573':'#e94560') + '">$' + Math.abs(netProfit).toFixed(2) + ' ' + (netProfit>=0?'profit':'loss') + '</strong><br>Receipts on file: <strong style="color:#f0f0f0">' + rList.length + '</strong><br>Settlements on file: <strong style="color:#f0f0f0">' + sList.length + '</strong><br>Storage: <strong style="color:#2ed573">Google Drive</strong></p></div>';
 }
 
 // ── HOME ──
