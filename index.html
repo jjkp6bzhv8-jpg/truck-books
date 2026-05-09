@@ -1329,7 +1329,7 @@ async function scanEldWithAI(file) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 200, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
-        { type: 'text', text: 'This is a truck driver ELD log. Read it and respond ONLY with JSON: {"date":"MM/DD/YYYY","miles":"350","away_from_home":true}. Set away_from_home to true if the driver appears to have been on the road away from home, false if at home/off duty all day. If you cannot read the date clearly, use todays date.' }
+        { type: 'text', text: 'This is a truck driver ELD log. Read it and respond ONLY with JSON: {"date":"MM/DD/YYYY","miles":"350","away_from_home":true}. Set away_from_home to true if the driver appears to have been on the road away from home, false if at home/off duty all day. CRITICAL: For the date, if no year is visible on the log, always assume the current year ' + new Date().getFullYear() + '. Never guess a past year unless it is clearly printed on the log.' }
       ]}]})
     });
     const d = await r.json();
