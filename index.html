@@ -464,6 +464,7 @@
     <div class="filter-row">
       <div class="filter-btn" onclick="setFilter('year',this)">This Year</div>
       <div class="filter-btn active" onclick="setFilter('month',this)">This Month</div>
+      <div class="filter-btn" onclick="setFilter('week',this)">This Week</div>
       <div class="filter-btn" onclick="setFilter('pick',this)">Pick Month</div>
     </div>
     <div id="plPickerRow" style="display:none;gap:8px;margin-bottom:12px;display:none">
@@ -1877,6 +1878,14 @@ function filteredReceipts() {
     const d = parseReceiptDate(r.date, r.savedAt);
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (activeFilter === 'week') {
+      // Pay week: Thursday to Wednesday
+      const day = now.getDay(); // 0=Sun,1=Mon,...,4=Thu,5=Fri,6=Sat
+      const daysFromThursday = (day + 3) % 7; // days since last Thursday
+      const weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate() - daysFromThursday);
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999);
+      return d >= weekStart && d <= weekEnd;
+    }
     if (activeFilter === 'pick') {
       const m = parseInt(document.getElementById('plPickMonth')?.value ?? now.getMonth());
       const y = parseInt(document.getElementById('plPickYear')?.value ?? now.getFullYear());
@@ -1891,6 +1900,13 @@ function filteredSettlements() {
     const d = parseReceiptDate(s.date, s.savedAt);
     if (activeFilter === 'year') return d.getFullYear() === now.getFullYear();
     if (activeFilter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (activeFilter === 'week') {
+      const day = now.getDay();
+      const daysFromThursday = (day + 3) % 7;
+      const weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate() - daysFromThursday);
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999);
+      return d >= weekStart && d <= weekEnd;
+    }
     if (activeFilter === 'pick') {
       const m = parseInt(document.getElementById('plPickMonth')?.value ?? now.getMonth());
       const y = parseInt(document.getElementById('plPickYear')?.value ?? now.getFullYear());
