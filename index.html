@@ -1481,14 +1481,17 @@ async function loadSettlements() {
     if (res.files && res.files.length) {
       const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
       settlements = await r.json();
-      // Always recalculate net using only positive non-skipped deductions
+      // Fix net using totalDeductions if available, otherwise use sum of positive non-skipped deductions
+      let fixNeeded = false;
       settlements = settlements.map(s => {
-        const counted = (s.deductions||[]).filter(d => !d.skip && parseFloat(d.amount||0) > 0);
-        const correctTotal = counted.reduce((sum, d) => sum + parseFloat(d.amount||0), 0);
+        const correctTotal = s.totalDeductions 
+          ? parseFloat(s.totalDeductions)
+          : (s.deductions||[]).filter(d => !d.skip && parseFloat(d.amount||0) > 0).reduce((sum,d) => sum + parseFloat(d.amount||0), 0);
         const correctNet = parseFloat((parseFloat(s.gross) - correctTotal).toFixed(2));
-        return { ...s, net: correctNet };
+        if (Math.abs(correctNet - s.net) > 0.01) { fixNeeded = true; return { ...s, net: correctNet }; }
+        return s;
       });
-      try { await saveSettlementsIndex(); } catch(e) { console.error('save fix failed', e); }
+      if (fixNeeded) { try { await saveSettlementsIndex(); } catch(e) {} }
     }
   } catch(e) { settlements = []; }
 }
@@ -1581,14 +1584,14 @@ async function processAllSettlementPages() {
   }
 
   const grossInstruction = settlementType === 'catchup'
-    ? 'Read the YEAR-TO-DATE (YTD) gross earnings total — this is the catch-up/YTD mode.'
-    : 'Read the CURRENT WEEK gross earnings only — do NOT use YTD totals.';
+    ? 'Read the YEAR-TO-DATE (YTD) Gross Earnings total from the Paycheck Summary table.'
+    : 'Read the CURRENT week Gross Earnings from the Paycheck Summary table — do NOT use YTD.';
 
-  const skipFuelRule = settlementType === 'catchup'
-    ? 'This is a CATCH-UP/YTD settlement. Set skip:true ONLY for deductions with a NEGATIVE amount (credits back to driver). Include ALL other deductions including fuel, DEF, IFTA — everything counts.'
-    : 'This is a WEEKLY settlement. Set skip:true for fuel-related items (fuel purchase, fuel advance, fuel charge, DEF, IFTA, fuel tax) since those are logged separately as receipts.';
+  const deductionInstruction = settlementType === 'catchup'
+    ? 'Read the YTD Other Deductions total from the Paycheck Summary table. Also read each individual deduction line from the Deductions section so they can be broken out by category — but the total MUST match the YTD Other Deductions number from Paycheck Summary.'
+    : 'Read each individual deduction line. Skip fuel-related items (fuel purchase, fuel advance, DEF, IFTA, fuel tax) since those are logged separately as receipts.';
 
-  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet with ${settlementPages.length} page(s). ${grossInstruction} ${skipFuelRule} Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Bobtail Insurance","amount":"45.00","category":"Insurance","skip":false},{"label":"Fuel Purchase","amount":"8766.23","category":"Fuel","skip":false},{"label":"Required Escrow","amount":"-1687.68","category":"Other","skip":true}]}. Rules: 1) date is the check date or period end date. 2) Include EVERY deduction line item from the sheet. 3) Map each deduction to one of these categories: Insurance, Fuel, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other. 4) Use the correct gross based on the instruction above. 5) If an amount is negative, set skip:true.` });
+  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet with ${settlementPages.length} page(s). ${grossInstruction} ${deductionInstruction} Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"27179.26","totalDeductions":"12270.76","deductions":[{"label":"Bobtail Insurance","amount":"121.80","category":"Insurance","skip":false},{"label":"Fuel Purchase","amount":"8766.23","category":"Fuel","skip":false}]}. Rules: 1) date is the check date. 2) gross and totalDeductions come from the Paycheck Summary table — use those exact numbers. 3) List every deduction line for category breakdown. 4) Map each to: Insurance, Fuel, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other. 5) For weekly settlements skip:true for fuel items. For YTD settlements include everything.` });
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1599,8 +1602,7 @@ async function processAllSettlementPages() {
     const d = await r.json();
     settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
     const skipped = settlementCurrentResult.deductions.filter(d => d.skip);
-    const counted = settlementCurrentResult.deductions.filter(d => !d.skip && parseFloat(d.amount||0) > 0);
-    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount||0), 0);
+    const totalDeductions = parseFloat(settlementCurrentResult.totalDeductions || 0);
     const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
     const typeLabel = settlementType === 'catchup' ? ' (YTD Catch-up)' : '';
     document.getElementById('settlementAiRows').innerHTML = `
@@ -1931,6 +1933,7 @@ function renderPL() {
 
   // Settlement deduction expenses (non-fuel)
   const settlementDeductionTotal = sList.reduce((s, sv) => {
+    if (sv.totalDeductions) return s + parseFloat(sv.totalDeductions);
     return s + (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0) > 0).reduce((a,d)=>a+parseFloat(d.amount||0),0);
   }, 0);
 
