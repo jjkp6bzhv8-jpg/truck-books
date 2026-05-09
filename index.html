@@ -1591,7 +1591,7 @@ async function processAllSettlementPages() {
     const d = await r.json();
     settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
     const skipped = settlementCurrentResult.deductions.filter(d => d.skip);
-    const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
+    const counted = settlementCurrentResult.deductions.filter(d => !d.skip && parseFloat(d.amount||0) > 0);
     const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount||0), 0);
     const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
     const typeLabel = settlementType === 'catchup' ? ' (YTD Catch-up)' : '';
