@@ -1254,7 +1254,7 @@ async function scanWithAI(file) {
     document.getElementById('aiResultRows').innerHTML = `
       <div class="result-row"><span class="result-label">Vendor</span><span class="result-value">${currentResult.vendor}</span></div>
       <div class="result-row"><span class="result-label">Date</span><span class="result-value">${currentResult.date}</span></div>
-      <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$$\{fmt(parseFloat(currentResult.amount))\}</span></div>
+      <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$${fmt(parseFloat(currentResult.amount))}</span></div>
       <div class="result-row"><span class="result-label">Category</span><span class="result-value">${currentResult.category}</span></div>
       ${isFuel ? `
       <div class="result-row"><span class="result-label">Gallons</span><span class="result-value">${currentResult.gallons || '—'}</span></div>
@@ -1675,11 +1675,11 @@ async function processAllSettlementPages() {
     const typeLabel = settlementType === 'catchup' ? ' (YTD Catch-up)' : '';
     document.getElementById('settlementAiRows').innerHTML = `
       <div class="result-row"><span class="result-label">Period</span><span class="result-value">${settlementCurrentResult.date}${typeLabel}</span></div>
-      <div class="result-row"><span class="result-label">Gross Pay</span><span class="result-value" style="color:#2ed573">$$\{fmt(parseFloat(settlementCurrentResult.gross))\}</span></div>
-      <div class="result-row"><span class="result-label">Total Deductions</span><span class="result-value" style="color:#e94560">-$$\{fmt(totalDeductions)\}</span></div>
-      ${counted.map(d=>`<div class="result-row"><span class="result-label">${d.label} <span style="color:#555;font-size:11px">[${d.category}]</span></span><span class="result-value" style="color:#e94560">-$$\{fmt(parseFloat(d.amount||0))\}</span></div>`).join('')}
+      <div class="result-row"><span class="result-label">Gross Pay</span><span class="result-value" style="color:#2ed573">$${fmt(parseFloat(settlementCurrentResult.gross))}</span></div>
+      <div class="result-row"><span class="result-label">Total Deductions</span><span class="result-value" style="color:#e94560">-$${fmt(totalDeductions)}</span></div>
+      ${counted.map(d=>`<div class="result-row"><span class="result-label">${d.label} <span style="color:#555;font-size:11px">[${d.category}]</span></span><span class="result-value" style="color:#e94560">-$${fmt(parseFloat(d.amount||0))}</span></div>`).join('')}
       ${skipped.map(d=>`<div class="result-row"><span class="result-label">${d.label}</span><span class="result-value deduction-skipped">skipped (fuel logged separately)</span></div>`).join('')}
-      <div class="result-row" style="border-top:1px solid #333;margin-top:4px;padding-top:8px"><span class="result-label" style="color:#f0f0f0;font-weight:700">Net After Deductions</span><span class="result-value" style="color:#2ed573;font-size:16px">$$\{fmt(net)\}</span></div>`;
+      <div class="result-row" style="border-top:1px solid #333;margin-top:4px;padding-top:8px"><span class="result-label" style="color:#f0f0f0;font-weight:700">Net After Deductions</span><span class="result-value" style="color:#2ed573;font-size:16px">$${fmt(net)}</span></div>`;
     document.getElementById('settlementAiResult').style.display = 'block';
     document.getElementById('settlementSaveBtn').style.display = 'block';
   } catch(e) { showToast('Error reading settlement. Try again.'); console.error(e); }
@@ -2351,8 +2351,8 @@ function generateExport() {
     else {
       let total = 0;
       html += '<table><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Notes</th></tr>';
-      list.forEach(r => { total += parseFloat(r.amount)||0; html += `<tr><td>${r.date||'—'}</td><td>${r.vendor||'—'}</td><td>${r.category||'—'}</td><td>$$\{fmt((parseFloat(r.amount)||0))\}</td><td>${r.notes||''}</td></tr>`; });
-      html += `</table><div class="total">Total: $$\{fmt(total)\}</div>`;
+      list.forEach(r => { total += parseFloat(r.amount)||0; html += `<tr><td>${r.date||'—'}</td><td>${r.vendor||'—'}</td><td>${r.category||'—'}</td><td>$${fmt((parseFloat(r.amount)||0))}</td><td>${r.notes||''}</td></tr>`; });
+      html += `</table><div class="total">Total: $${fmt(total)}</div>`;
     }
   }
   if (type === 'settlements' || type === 'all') {
@@ -2362,8 +2362,8 @@ function generateExport() {
     else {
       let total = 0;
       html += '<table><tr><th>Date</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th></tr>';
-      list.forEach(s => { const gross=parseFloat(s.gross)||0; const ded=(s.deductions||[]).reduce((a,d)=>a+(parseFloat(d.amount)||0),0); total+=gross; html += `<tr><td>${s.date||'—'}</td><td>$$\{fmt(gross)\}</td><td style="font-size:11px">${(s.deductions||[]).map(d=>d.label+': $'+fmt((parseFloat(d.amount)||0))).join(', ')||'—'}</td><td>$$\{fmt((gross-ded))\}</td></tr>`; });
-      html += `</table><div class="total">Total Gross: $$\{fmt(total)\}</div>`;
+      list.forEach(s => { const gross=parseFloat(s.gross)||0; const ded=(s.deductions||[]).reduce((a,d)=>a+(parseFloat(d.amount)||0),0); total+=gross; html += `<tr><td>${s.date||'—'}</td><td>$${fmt(gross)}</td><td style="font-size:11px">${(s.deductions||[]).map(d=>d.label+': $'+fmt((parseFloat(d.amount)||0))).join(', ')||'—'}</td><td>$${fmt((gross-ded))}</td></tr>`; });
+      html += `</table><div class="total">Total Gross: $${fmt(total)}</div>`;
     }
   }
   if (type === 'eld' || type === 'all') {
@@ -2550,7 +2550,7 @@ function renderMixedLineItems() {
         <div style="font-size:14px;color:#f0f0f0">${item.name}</div>
         <div style="font-size:11px;margin-top:2px;color:${isBiz ? '#2ed573' : '#888'}">${isBiz ? '✅ Business' : '👤 Personal'}</div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:${isBiz ? '#2ed573' : '#888'}">$$\{fmt(item.amount)\}</div>
+      <div style="font-size:15px;font-weight:700;color:${isBiz ? '#2ed573' : '#888'}">$${fmt(item.amount)}</div>
     </div>`;
   });
   document.getElementById('mixedLineItems').innerHTML = html;
@@ -2663,16 +2663,16 @@ function renderMixedReceipts() {
           <div class="receipt-meta">${r.date} · ${r.category}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="receipt-amount">$$\{fmt(parseFloat(r.amount))\}</div>
+          <div class="receipt-amount">$${fmt(parseFloat(r.amount))}</div>
           <button class="delete-btn" onclick="event.stopPropagation();delMixedReceipt('${r.id}','${r.photoFileId}')">🗑️</button>
         </div>
       </div>
       <div class="receipt-detail" id="mxd_${r.id}" style="display:none">
         ${r.photoThumb ? `<img src="${r.photoThumb}" style="width:100%;border-radius:8px;margin-bottom:12px;cursor:pointer" onclick="event.stopPropagation();openFullscreen('${r.photoThumb}')">` : ''}
-        <div class="receipt-detail-row"><span class="receipt-detail-label">Business Total</span><span class="receipt-detail-value" style="color:#2ed573">$$\{fmt(parseFloat(r.amount))\}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Business Total</span><span class="receipt-detail-value" style="color:#2ed573">$${fmt(parseFloat(r.amount))}</span></div>
         <div class="receipt-detail-row"><span class="receipt-detail-label">Category</span><span class="receipt-detail-value">${r.category}</span></div>
         <div style="margin-top:10px"><div style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Line Items</div>
-        ${(r.items||[]).map(item => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222"><span style="font-size:13px;color:${item.type==='business'?'#f0f0f0':'#555'}">${item.name} <span style="font-size:11px;color:${item.type==='business'?'#2ed573':'#555'}">${item.type==='business'?'✅':'👤'}</span></span><span style="font-size:13px;color:${item.type==='business'?'#f0f0f0':'#555'}">$$\{fmt(parseFloat(item.amount))\}</span></div>`).join('')}
+        ${(r.items||[]).map(item => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222"><span style="font-size:13px;color:${item.type==='business'?'#f0f0f0':'#555'}">${item.name} <span style="font-size:11px;color:${item.type==='business'?'#2ed573':'#555'}">${item.type==='business'?'✅':'👤'}</span></span><span style="font-size:13px;color:${item.type==='business'?'#f0f0f0':'#555'}">$${fmt(parseFloat(item.amount))}</span></div>`).join('')}
         </div>
       </div>
     </div>`).join('');
@@ -2803,7 +2803,7 @@ function renderLoads() {
           <div style="font-size:12px;color:#555;margin-top:2px">${l.miles ? l.miles + ' mi · $' + l.rpm + '/mi' : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:18px;font-weight:700;color:#2ed573">$$\{fmt(parseFloat(l.rate||0))\}</div>
+          <div style="font-size:18px;font-weight:700;color:#2ed573">$${fmt(parseFloat(l.rate||0))}</div>
           <button onclick="deleteLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e94560;font-size:12px;padding:4px 8px;cursor:pointer;margin-top:4px">🗑️ Delete</button>
         </div>
       </div>
