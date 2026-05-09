@@ -327,10 +327,19 @@
         <div id="loadFixedCostTotal" style="color:#e94560;font-size:20px;font-weight:700;text-align:center">$0.00</div>
         <div id="loadFixedCostList" style="margin-top:8px"></div>
       </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
+          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Your RPM</div>
+          <div id="loadWeekRPM" style="color:#f0f0f0;font-size:20px;font-weight:700">—</div>
+        </div>
+        <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
+          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Target RPM</div>
+          <div style="color:#f0f0f0;font-size:20px;font-weight:700">$1.65</div>
+        </div>
+      </div>
       <div style="background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
-        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Est. Net (before deductions)</div>
+        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Est. Net</div>
         <div id="loadWeekNet" style="font-size:22px;font-weight:700">$0.00</div>
-        <div style="color:#555;font-size:11px;margin-top:4px">⚠️ Settlement deductions not included</div>
       </div>
     </div>
 
@@ -2908,6 +2917,15 @@ function renderLoads() {
     `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0">
       <span>${fc.name}</span><span style="color:#e94560">$${fmt(fc.amount)}</span>
     </div>`).join('');
+
+  // Weekly blended RPM
+  const totalMiles = weekLoads.reduce((s,l) => s + (parseFloat(l.miles)||0), 0);
+  const weekRPMEl = document.getElementById('loadWeekRPM');
+  if (totalMiles > 0) {
+    weekRPMEl.textContent = '$' + (weekGross / totalMiles).toFixed(2) + '/mi';
+  } else {
+    weekRPMEl.textContent = '—';
+  }
 
   // Net
   const netEl = document.getElementById('loadWeekNet');
