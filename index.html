@@ -1583,15 +1583,11 @@ async function processAllSettlementPages() {
     content_parts.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }});
   }
 
-  const grossInstruction = settlementType === 'catchup'
-    ? 'Read the YEAR-TO-DATE (YTD) Gross Earnings total from the Paycheck Summary table.'
-    : 'Read the CURRENT week Gross Earnings from the Paycheck Summary table — do NOT use YTD.';
+  const modeInstruction = settlementType === 'catchup'
+    ? 'MODE: CATCH-UP YTD. You MUST use the YTD row numbers only. Find the Paycheck Summary table. Use the YTD row: gross = YTD Gross Earnings, totalDeductions = YTD Other Deductions. Do NOT use Current row numbers.'
+    : 'MODE: WEEKLY. You MUST use the Current row numbers only. Find the Paycheck Summary table. Use the Current row: gross = Current Gross Earnings, totalDeductions = Current Other Deductions. Do NOT use YTD row numbers.';
 
-  const deductionInstruction = settlementType === 'catchup'
-    ? 'Read the YTD Other Deductions total from the Paycheck Summary table. Also read each individual deduction line from the Deductions section so they can be broken out by category — but the total MUST match the YTD Other Deductions number from Paycheck Summary.'
-    : 'Read each individual deduction line. Skip fuel-related items (fuel purchase, fuel advance, DEF, IFTA, fuel tax) since those are logged separately as receipts.';
-
-  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet with ${settlementPages.length} page(s). ${grossInstruction} ${deductionInstruction} Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"27179.26","totalDeductions":"12270.76","deductions":[{"label":"Bobtail Insurance","amount":"121.80","category":"Insurance","skip":false},{"label":"Fuel Purchase","amount":"8766.23","category":"Fuel","skip":false}]}. Rules: 1) date is the check date. 2) gross and totalDeductions come from the Paycheck Summary table — use those exact numbers. 3) List every deduction line for category breakdown. 4) Map each to: Insurance, Fuel, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other. 5) For weekly settlements skip:true for fuel items. For YTD settlements include everything.` });
+  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet (${settlementPages.length} page(s)). ${modeInstruction} Also list each individual deduction line item for category breakdown. Respond ONLY with valid JSON: {"date":"MM/DD/YYYY","gross":"27179.26","totalDeductions":"12270.76","deductions":[{"label":"Bobtail Insurance","amount":"121.80","category":"Insurance","skip":false},{"label":"IC - Required Escrow","amount":"-1687.68","category":"Other","skip":true}]}. CRITICAL RULES: 1) date = check date or pay end date. 2) gross and totalDeductions MUST come from the Paycheck Summary table YTD or Current row as instructed above. 3) For each deduction line: if amount is negative set skip:true. For weekly mode also set skip:true for fuel items. 4) Categories: Insurance, Fuel, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other.` });
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
