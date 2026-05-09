@@ -1659,13 +1659,13 @@ async function saveSettlement() {
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
     updateLoading('Saving settlement record...');
-    const counted = settlementCurrentResult.deductions.filter(d => !d.skip);
-    const totalDeductions = counted.reduce((s,d) => s + parseFloat(d.amount||0), 0);
-    const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
+    const totalDeductions = parseFloat(settlementCurrentResult.totalDeductions || 0);
+    const net = parseFloat((parseFloat(settlementCurrentResult.gross) - totalDeductions).toFixed(2));
     settlements.unshift({
       id,
       date: settlementCurrentResult.date,
       gross: parseFloat(settlementCurrentResult.gross),
+      totalDeductions,
       deductions: settlementCurrentResult.deductions,
       net,
       settlementType,
