@@ -2001,14 +2001,16 @@ function renderHome() {
   const year = now.getFullYear();
   const yearReceipts = receipts.filter(r => new Date(r.savedAt).getFullYear() === year);
   const yearSettlements = settlements.filter(s => new Date(s.savedAt).getFullYear() === year);
-  const totalExpenses = yearReceipts.reduce((s,r) => s + r.amount, 0);
+  const receiptExpenses = yearReceipts.reduce((s,r) => s + r.amount, 0);
+  const settlementDeductions = yearSettlements.reduce((s,sv) => s + (sv.totalDeductions ? parseFloat(sv.totalDeductions) : (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0)>0).reduce((a,d)=>a+parseFloat(d.amount||0),0)), 0);
+  const totalExpenses = receiptExpenses + settlementDeductions;
   const totalIncome = yearSettlements.reduce((s,sv) => s + sv.gross, 0);
   const net = totalIncome - totalExpenses;
   document.getElementById('homeIncome').textContent = '$' + totalIncome.toFixed(2);
   document.getElementById('homeIncome').className = 'home-stat-value green';
   document.getElementById('homeIncomeCount').textContent = yearSettlements.length + ' settlement' + (yearSettlements.length !== 1 ? 's' : '');
   document.getElementById('homeExpenses').textContent = '$' + totalExpenses.toFixed(2);
-  document.getElementById('homeExpenseCount').textContent = yearReceipts.length + ' receipt' + (yearReceipts.length !== 1 ? 's' : '');
+  document.getElementById('homeExpenseCount').textContent = yearReceipts.length + ' receipt' + (yearReceipts.length !== 1 ? 's' : '') + ' + deductions';
   const netEl = document.getElementById('homeNet');
   netEl.textContent = '$' + Math.abs(net).toFixed(2) + (net >= 0 ? ' ▲' : ' ▼');
   netEl.className = 'home-stat-value ' + (net >= 0 ? 'green' : '');
