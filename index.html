@@ -1481,6 +1481,19 @@ async function loadSettlements() {
     if (res.files && res.files.length) {
       const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
       settlements = await r.json();
+      // One-time fix: recalculate net for any settlement with negative deductions counted incorrectly
+      let needsSave = false;
+      settlements = settlements.map(s => {
+        const counted = (s.deductions||[]).filter(d => !d.skip && parseFloat(d.amount||0) > 0);
+        const correctTotal = counted.reduce((sum, d) => sum + parseFloat(d.amount||0), 0);
+        const correctNet = parseFloat(s.gross) - correctTotal;
+        if (Math.abs(correctNet - s.net) > 0.01) {
+          needsSave = true;
+          return { ...s, net: parseFloat(correctNet.toFixed(2)) };
+        }
+        return s;
+      });
+      if (needsSave) { try { await saveSettlementsIndex(); } catch(e) {} }
     }
   } catch(e) { settlements = []; }
 }
