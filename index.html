@@ -1440,7 +1440,7 @@ async function saveEldLog() {
     updateLoading('Saving log record...');
     eldLogs.unshift({ id, date: logDate, miles, awayFromHome: eldAwayFromHome, photoFileId: up.id, photoThumb: compressed, savedAt: new Date().toISOString() });
     // Sort by date descending
-    eldLogs.sort((a,b) => new Date(b.date) - new Date(a.date));
+    eldLogs.sort((a,b) => parseReceiptDate(b.date, b.savedAt) - parseReceiptDate(a.date, a.savedAt));
     await saveEldIndex();
 
     // Reset form
