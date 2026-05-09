@@ -554,7 +554,7 @@
         <button class="btn btn-dark" id="settlementCancelBtn" onclick="cancelSettlementScan()" style="display:none;margin-top:8px">✕ Cancel</button>
       </div>
       <div class="disclaimer">
-        <p>⚠️ Fuel deductions on settlement sheets are skipped automatically since you log fuel receipts separately.</p>
+        <p>⚠️ Weekly settlements: fuel deductions skipped since you log those separately. Catch-up (YTD) settlements: all deductions counted except negative credits.</p>
       </div>
       <div id="settlementsList"></div>
     </div>
@@ -1576,7 +1576,11 @@ async function processAllSettlementPages() {
     ? 'Read the YEAR-TO-DATE (YTD) gross earnings total — this is the catch-up/YTD mode.'
     : 'Read the CURRENT WEEK gross earnings only — do NOT use YTD totals.';
 
-  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet with ${settlementPages.length} page(s). ${grossInstruction} Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Bobtail Insurance","amount":"45.00","category":"Insurance","skip":false},{"label":"Fuel Purchase","amount":"200.00","category":"Fuel","skip":true}]}. Rules: 1) date is the check date or period end date. 2) For deductions, set skip:true only for fuel-related items (fuel purchase, fuel advance, fuel charge, DEF, IFTA) since those are logged separately as receipts. 3) Map each deduction to one of these categories: Insurance, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other. 4) Include ALL non-fuel deductions. 5) Use the correct gross based on the instruction above.` });
+  const skipFuelRule = settlementType === 'catchup'
+    ? 'This is a CATCH-UP/YTD settlement. Set skip:true ONLY for deductions with a NEGATIVE amount (credits back to driver). Include ALL other deductions including fuel, DEF, IFTA — everything counts.'
+    : 'This is a WEEKLY settlement. Set skip:true for fuel-related items (fuel purchase, fuel advance, fuel charge, DEF, IFTA, fuel tax) since those are logged separately as receipts.';
+
+  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet with ${settlementPages.length} page(s). ${grossInstruction} ${skipFuelRule} Respond ONLY with JSON: {"date":"MM/DD/YYYY","gross":"1250.00","deductions":[{"label":"Bobtail Insurance","amount":"45.00","category":"Insurance","skip":false},{"label":"Fuel Purchase","amount":"8766.23","category":"Fuel","skip":false},{"label":"Required Escrow","amount":"-1687.68","category":"Other","skip":true}]}. Rules: 1) date is the check date or period end date. 2) Include EVERY deduction line item from the sheet. 3) Map each deduction to one of these categories: Insurance, Fuel, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other. 4) Use the correct gross based on the instruction above. 5) If an amount is negative, set skip:true.` });
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1919,7 +1923,7 @@ function renderPL() {
 
   // Settlement deduction expenses (non-fuel)
   const settlementDeductionTotal = sList.reduce((s, sv) => {
-    return s + (sv.deductions||[]).filter(d=>!d.skip).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+    return s + (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0) > 0).reduce((a,d)=>a+parseFloat(d.amount||0),0);
   }, 0);
 
   const totalExpenses = receiptExpenses + settlementDeductionTotal;
