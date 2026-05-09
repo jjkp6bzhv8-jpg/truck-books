@@ -1885,14 +1885,14 @@ function renderReceipts() {
       <div class="receipt-item-header" onclick="toggle('d${r.id}')">
         ${r.photoThumb ? `<img class="receipt-thumb" src="${r.photoThumb}">` : '<div class="receipt-thumb-placeholder">🧾</div>'}
         <div class="receipt-info"><div class="receipt-vendor">${r.vendor}</div><div class="receipt-meta">${r.date} · ${r.category}</div></div>
-        <div class="receipt-amount">$$\{fmt(r.amount)\}</div>
+        <div class="receipt-amount">$${fmt(r.amount)}</div>
       </div>
       <div class="receipt-detail" id="d${r.id}">
         ${r.photoThumb ? `<img class="receipt-full-img" src="${r.photoThumb}" onclick="event.stopPropagation();openFullImg(this.src)">` : ''}
         ${r.photoFileId ? `<a href="https://drive.google.com/file/d/${r.photoFileId}/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>` : ''}
         <div class="receipt-detail-row"><span class="receipt-detail-label">Vendor</span><span class="receipt-detail-value">${r.vendor}</span></div>
         <div class="receipt-detail-row"><span class="receipt-detail-label">Date</span><span class="receipt-detail-value">${r.date}</span></div>
-        <div class="receipt-detail-row"><span class="receipt-detail-label">Amount</span><span class="receipt-detail-value">$$\{fmt(r.amount)\}</span></div>
+        <div class="receipt-detail-row"><span class="receipt-detail-label">Amount</span><span class="receipt-detail-value">$${fmt(r.amount)}</span></div>
         <div class="receipt-detail-row"><span class="receipt-detail-label">Category</span><span class="receipt-detail-value">${r.category}</span></div>
         ${r.category === 'Fuel' && r.gallons ? `<div class="receipt-detail-row"><span class="receipt-detail-label">Gallons</span><span class="receipt-detail-value">${r.gallons}</span></div>` : ''}
         ${r.category === 'Fuel' && r.odometer ? `<div class="receipt-detail-row"><span class="receipt-detail-label">Odometer</span><span class="receipt-detail-value">${r.odometer}</span></div>` : ''}
