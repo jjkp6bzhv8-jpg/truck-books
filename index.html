@@ -1601,13 +1601,15 @@ async function processAllSettlementPages() {
     });
     const d = await r.json();
     settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
-    const skipped = settlementCurrentResult.deductions.filter(d => d.skip);
+    const skipped = (settlementCurrentResult.deductions||[]).filter(d => d.skip);
+    const counted = (settlementCurrentResult.deductions||[]).filter(d => !d.skip);
     const totalDeductions = parseFloat(settlementCurrentResult.totalDeductions || 0);
     const net = parseFloat(settlementCurrentResult.gross) - totalDeductions;
     const typeLabel = settlementType === 'catchup' ? ' (YTD Catch-up)' : '';
     document.getElementById('settlementAiRows').innerHTML = `
       <div class="result-row"><span class="result-label">Period</span><span class="result-value">${settlementCurrentResult.date}${typeLabel}</span></div>
       <div class="result-row"><span class="result-label">Gross Pay</span><span class="result-value" style="color:#2ed573">$${parseFloat(settlementCurrentResult.gross).toFixed(2)}</span></div>
+      <div class="result-row"><span class="result-label">Total Deductions</span><span class="result-value" style="color:#e94560">-$${totalDeductions.toFixed(2)}</span></div>
       ${counted.map(d=>`<div class="result-row"><span class="result-label">${d.label} <span style="color:#555;font-size:11px">[${d.category}]</span></span><span class="result-value" style="color:#e94560">-$${parseFloat(d.amount||0).toFixed(2)}</span></div>`).join('')}
       ${skipped.map(d=>`<div class="result-row"><span class="result-label">${d.label}</span><span class="result-value deduction-skipped">skipped (fuel logged separately)</span></div>`).join('')}
       <div class="result-row" style="border-top:1px solid #333;margin-top:4px;padding-top:8px"><span class="result-label" style="color:#f0f0f0;font-weight:700">Net After Deductions</span><span class="result-value" style="color:#2ed573;font-size:16px">$${net.toFixed(2)}</span></div>`;
