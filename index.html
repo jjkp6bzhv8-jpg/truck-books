@@ -313,10 +313,39 @@
           <div id="loadWeekFuel" style="color:#e94560;font-size:20px;font-weight:700">$0.00</div>
         </div>
       </div>
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Other Expenses This Week</div>
+        <div id="loadWeekOther" style="color:#e94560;font-size:20px;font-weight:700;text-align:center">$0.00</div>
+        <div id="loadWeekOtherList" style="margin-top:8px;display:none"></div>
+      </div>
+      <!-- Fixed Weekly Costs -->
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Fixed Weekly Costs</div>
+          <button onclick="openFixedCostsEditor()" style="background:#222;border:1px solid #333;border-radius:6px;color:#888;font-size:11px;padding:3px 8px;cursor:pointer">✏️ Edit</button>
+        </div>
+        <div id="loadFixedCostTotal" style="color:#e94560;font-size:20px;font-weight:700;text-align:center">$0.00</div>
+        <div id="loadFixedCostList" style="margin-top:8px"></div>
+      </div>
       <div style="background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
         <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Est. Net (before deductions)</div>
         <div id="loadWeekNet" style="font-size:22px;font-weight:700">$0.00</div>
         <div style="color:#555;font-size:11px;margin-top:4px">⚠️ Settlement deductions not included</div>
+      </div>
+    </div>
+
+    <!-- Fixed Costs Editor Modal -->
+    <div class="modal-overlay" id="fixedCostsModal">
+      <div class="modal" style="max-height:80vh;overflow-y:auto">
+        <h3>✏️ Fixed Weekly Costs</h3>
+        <p>These deduct from your Est. Net every week automatically.</p>
+        <div id="fixedCostEditorList" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="newFixedName" placeholder="Description" style="flex:2">
+          <input type="number" id="newFixedAmt" placeholder="$0.00" step="0.01" style="flex:1">
+        </div>
+        <button class="btn btn-red" onclick="addFixedCost()" style="margin-bottom:8px">➕ Add Item</button>
+        <button class="btn btn-dark" onclick="closeFixedCostsEditor()">✅ Done</button>
       </div>
     </div>
 
@@ -2712,6 +2741,61 @@ async function confirmMixedDelete() {
 // ── WEEKLY LOAD TRACKER ──
 let weekLoads = JSON.parse(localStorage.getItem('tb_weekLoads') || '[]');
 
+const DEFAULT_FIXED_COSTS = [
+  { id: 'fc1', name: 'Communications Equipment', amount: 17.00 },
+  { id: 'fc2', name: 'IEL FHUT 2290', amount: 15.00 },
+  { id: 'fc3', name: 'Maintenance Reserve', amount: 42.12 },
+  { id: 'fc4', name: 'Performance Escrow', amount: 50.00 },
+  { id: 'fc5', name: 'O/O Collision Insurance', amount: 127.55 },
+  { id: 'fc6', name: 'Glass Coverage', amount: 3.46 }
+];
+
+let fixedCosts = JSON.parse(localStorage.getItem('tb_fixedCosts') || 'null');
+if (!fixedCosts) {
+  fixedCosts = DEFAULT_FIXED_COSTS;
+  localStorage.setItem('tb_fixedCosts', JSON.stringify(fixedCosts));
+}
+
+function saveFixedCosts() { localStorage.setItem('tb_fixedCosts', JSON.stringify(fixedCosts)); }
+
+function openFixedCostsEditor() {
+  renderFixedCostEditor();
+  document.getElementById('fixedCostsModal').classList.add('open');
+}
+
+function closeFixedCostsEditor() {
+  document.getElementById('fixedCostsModal').classList.remove('open');
+  renderLoads();
+}
+
+function renderFixedCostEditor() {
+  const el = document.getElementById('fixedCostEditorList');
+  if (!fixedCosts.length) { el.innerHTML = '<p style="color:#555;font-size:13px;text-align:center;padding:8px 0">No fixed costs yet.</p>'; return; }
+  el.innerHTML = fixedCosts.map(fc => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #2a2a2a">
+      <div style="flex:1;font-size:14px;color:#f0f0f0">${fc.name}</div>
+      <div style="color:#e94560;font-weight:700;font-size:14px">$${fmt(fc.amount)}</div>
+      <button onclick="deleteFixedCost('${fc.id}')" style="background:none;border:none;color:#e94560;font-size:16px;cursor:pointer;padding:2px 6px">🗑️</button>
+    </div>`).join('');
+}
+
+function addFixedCost() {
+  const name = document.getElementById('newFixedName').value.trim();
+  const amount = parseFloat(document.getElementById('newFixedAmt').value) || 0;
+  if (!name || !amount) return showToast('Enter name and amount');
+  fixedCosts.push({ id: 'fc' + Date.now(), name, amount });
+  saveFixedCosts();
+  document.getElementById('newFixedName').value = '';
+  document.getElementById('newFixedAmt').value = '';
+  renderFixedCostEditor();
+}
+
+function deleteFixedCost(id) {
+  fixedCosts = fixedCosts.filter(fc => fc.id !== id);
+  saveFixedCosts();
+  renderFixedCostEditor();
+}
+
 function saveWeekLoads() { localStorage.setItem('tb_weekLoads', JSON.stringify(weekLoads)); }
 
 function showManualLoadEntry() {
@@ -2774,22 +2858,58 @@ function renderLoads() {
     summary.style.display = 'none';
     return;
   }
-  // Calculate weekly gross and fuel from current week receipts
+
+  // Week start (Thursday)
   const now = new Date();
   const day = now.getDay();
   const daysFromThursday = (day + 3) % 7;
   const weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate() - daysFromThursday);
-  const weekFuel = receipts.filter(r => {
+
+  // Fuel receipts this week
+  const weekFuelReceipts = receipts.filter(r => {
     const d = parseReceiptDate(r.date, r.savedAt);
     return r.category === 'Fuel' && d >= weekStart;
-  }).reduce((s,r) => s + r.amount, 0);
+  });
+  const weekFuel = weekFuelReceipts.reduce((s,r) => s + r.amount, 0);
+
+  // All other receipts this week (non-fuel)
+  const weekOtherReceipts = receipts.filter(r => {
+    const d = parseReceiptDate(r.date, r.savedAt);
+    return r.category !== 'Fuel' && d >= weekStart;
+  });
+  const weekOther = weekOtherReceipts.reduce((s,r) => s + r.amount, 0);
+
+  // Fixed costs total
+  const weekFixed = fixedCosts.reduce((s,fc) => s + fc.amount, 0);
 
   const weekGross = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0), 0);
-  const weekNet = weekGross - weekFuel;
+  const weekNet = weekGross - weekFuel - weekOther - weekFixed;
 
   summary.style.display = 'block';
   document.getElementById('loadWeekGross').textContent = '$' + fmt(weekGross);
   document.getElementById('loadWeekFuel').textContent = '$' + fmt(weekFuel);
+
+  // Other expenses
+  document.getElementById('loadWeekOther').textContent = '$' + fmt(weekOther);
+  const otherListEl = document.getElementById('loadWeekOtherList');
+  if (weekOtherReceipts.length) {
+    otherListEl.style.display = 'block';
+    otherListEl.innerHTML = weekOtherReceipts.map(r =>
+      `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0">
+        <span>${r.vendor || r.category}</span><span style="color:#e94560">$${fmt(r.amount)}</span>
+      </div>`).join('');
+  } else {
+    otherListEl.style.display = 'none';
+  }
+
+  // Fixed costs
+  document.getElementById('loadFixedCostTotal').textContent = '$' + fmt(weekFixed);
+  document.getElementById('loadFixedCostList').innerHTML = fixedCosts.map(fc =>
+    `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0">
+      <span>${fc.name}</span><span style="color:#e94560">$${fmt(fc.amount)}</span>
+    </div>`).join('');
+
+  // Net
   const netEl = document.getElementById('loadWeekNet');
   netEl.textContent = '$' + fmt(Math.abs(weekNet)) + (weekNet >= 0 ? ' ▲' : ' ▼');
   netEl.style.color = weekNet >= 0 ? '#2ed573' : '#e94560';
