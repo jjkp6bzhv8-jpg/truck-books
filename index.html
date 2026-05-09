@@ -252,8 +252,76 @@
     <div class="drawer-item" id="d-settlements" onclick="switchTab('settlements','nav-settlements');closeDrawer()"><span class="d-icon">📄</span> Settlements</div>
     <div class="drawer-item" id="d-bol" onclick="switchTab('bol','');closeDrawer()"><span class="d-icon">📦</span> BOL Storage</div>
     <div class="drawer-item" id="d-export" onclick="switchTab('export','');closeDrawer()"><span class="d-icon">📤</span> Export / Audit Report</div>
+    <div class="drawer-item" id="d-loads" onclick="switchTab('loads','');closeDrawer()"><span class="d-icon">🚛</span> Weekly Load Tracker</div>
     <div class="drawer-title" style="margin-top:16px">Account</div>
     <div class="drawer-item" id="d-settings" onclick="switchTab('settings','nav-settings');closeDrawer()"><span class="d-icon">⚙️</span> Settings</div>
+  </div>
+
+
+  <!-- WEEKLY LOAD TRACKER TAB -->
+  <div class="section" id="tab-loads">
+    <div class="card">
+      <div class="card-title">🚛 Weekly Load Tracker</div>
+      <p style="color:#888;font-size:13px;margin-bottom:12px">Track loads during the week for a rough idea of earnings. This does NOT affect P&L — settlement is the final authority.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div class="scan-choice-btn" onclick="document.getElementById('loadPhotoInput').click()" style="padding:10px;flex:1">
+          <div class="sc-icon" style="font-size:20px">📷</div>
+          Scan Load
+        </div>
+        <div class="scan-choice-btn" onclick="showManualLoadEntry()" style="padding:10px;flex:1">
+          <div class="sc-icon" style="font-size:20px">✏️</div>
+          Enter Manual
+        </div>
+      </div>
+      <input type="file" id="loadPhotoInput" accept="image/*" onchange="handleLoadPhoto(this)" style="display:none">
+
+      <!-- Manual entry form -->
+      <div id="loadManualForm" style="display:none">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Order #</label>
+        <input type="text" id="loadOrderNum" placeholder="e.g. APE1595" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Pickup</label>
+        <input type="text" id="loadPickup" placeholder="e.g. BRUNAL" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Delivery</label>
+        <input type="text" id="loadDelivery" placeholder="e.g. BI IL" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Miles</label>
+        <input type="number" id="loadMiles" placeholder="e.g. 766" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Rate ($)</label>
+        <input type="number" id="loadRate" placeholder="e.g. 1372.00" step="0.01" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:12px">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-red" onclick="saveManualLoad()" style="flex:1">✅ Add Load</button>
+          <button class="btn btn-dark" onclick="document.getElementById('loadManualForm').style.display='none'" style="flex:1">✕ Cancel</button>
+        </div>
+      </div>
+
+      <!-- AI scan spinner -->
+      <div class="spinner" id="loadSpinner" style="display:none">AI reading load confirmation...</div>
+    </div>
+
+    <!-- Weekly summary -->
+    <div class="card" id="loadSummaryCard" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">📊 This Week</div>
+        <button class="btn btn-dark" onclick="confirmNewWeek()" style="padding:6px 12px;font-size:12px">🔄 New Week</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
+          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Est. Gross</div>
+          <div id="loadWeekGross" style="color:#2ed573;font-size:20px;font-weight:700">$0.00</div>
+        </div>
+        <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
+          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Fuel This Week</div>
+          <div id="loadWeekFuel" style="color:#e94560;font-size:20px;font-weight:700">$0.00</div>
+        </div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
+        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Est. Net (before deductions)</div>
+        <div id="loadWeekNet" style="font-size:22px;font-weight:700">$0.00</div>
+        <div style="color:#555;font-size:11px;margin-top:4px">⚠️ Settlement deductions not included</div>
+      </div>
+    </div>
+
+    <!-- Load list -->
+    <div id="loadsList"></div>
   </div>
 
   <div class="fullimg-overlay" id="fullImgOverlay" onclick="closeFullImg()">
@@ -1117,6 +1185,7 @@ function switchTab(name, navId) {
   if (name === 'settlements') renderSettlements();
   if (name === 'bol') renderBols();
   if (name === 'export') { populateExportCategories(); updateExportCatVisibility(); }
+  if (name === 'loads') renderLoads();
   if (name === 'home') renderHome();
 }
 
@@ -2636,6 +2705,124 @@ async function confirmMixedDelete() {
   renderMixedReceipts();
   showToast('Mixed receipt deleted');
   try { await saveMixedIndex(); } catch(e) { console.error(e); }
+}
+
+
+// ── WEEKLY LOAD TRACKER ──
+let weekLoads = JSON.parse(localStorage.getItem('tb_weekLoads') || '[]');
+
+function saveWeekLoads() { localStorage.setItem('tb_weekLoads', JSON.stringify(weekLoads)); }
+
+function showManualLoadEntry() {
+  document.getElementById('loadManualForm').style.display = 'block';
+  document.getElementById('loadOrderNum').value = '';
+  document.getElementById('loadPickup').value = '';
+  document.getElementById('loadDelivery').value = '';
+  document.getElementById('loadMiles').value = '';
+  document.getElementById('loadRate').value = '';
+}
+
+function saveManualLoad() {
+  const order = document.getElementById('loadOrderNum').value.trim();
+  const pickup = document.getElementById('loadPickup').value.trim();
+  const delivery = document.getElementById('loadDelivery').value.trim();
+  const miles = parseFloat(document.getElementById('loadMiles').value) || 0;
+  const rate = parseFloat(document.getElementById('loadRate').value) || 0;
+  if (!rate) return showToast('Enter a rate');
+  addLoad({ order, pickup, delivery, miles, rate });
+  document.getElementById('loadManualForm').style.display = 'none';
+}
+
+function addLoad(data) {
+  const rpm = data.miles > 0 ? (data.rate / data.miles).toFixed(2) : '—';
+  weekLoads.unshift({ id: Date.now().toString(), ...data, rpm, addedAt: new Date().toISOString() });
+  saveWeekLoads();
+  renderLoads();
+  showToast('Load added ✅');
+}
+
+async function handleLoadPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const key = localStorage.getItem('tb_key');
+  if (!key) return showToast('Add API key in Settings');
+  document.getElementById('loadSpinner').style.display = 'block';
+  const base64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(file); });
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 500, messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
+        { type: 'text', text: 'Read this load confirmation. Respond ONLY with JSON: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00}' }
+      ]}]})
+    });
+    const d = await resp.json();
+    const result = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    addLoad(result);
+  } catch(e) { showToast('Could not read load. Try manual entry.'); console.error(e); }
+  document.getElementById('loadSpinner').style.display = 'none';
+  input.value = '';
+}
+
+function renderLoads() {
+  const el = document.getElementById('loadsList');
+  const summary = document.getElementById('loadSummaryCard');
+  if (!weekLoads.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🚛</div><p>No loads this week yet.<br>Scan or enter your first load!</p></div>';
+    summary.style.display = 'none';
+    return;
+  }
+  // Calculate weekly gross and fuel from current week receipts
+  const now = new Date();
+  const day = now.getDay();
+  const daysFromThursday = (day + 3) % 7;
+  const weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate() - daysFromThursday);
+  const weekFuel = receipts.filter(r => {
+    const d = parseReceiptDate(r.date, r.savedAt);
+    return r.category === 'Fuel' && d >= weekStart;
+  }).reduce((s,r) => s + r.amount, 0);
+
+  const weekGross = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0), 0);
+  const weekNet = weekGross - weekFuel;
+
+  summary.style.display = 'block';
+  document.getElementById('loadWeekGross').textContent = '$' + weekGross.toFixed(2);
+  document.getElementById('loadWeekFuel').textContent = '$' + weekFuel.toFixed(2);
+  const netEl = document.getElementById('loadWeekNet');
+  netEl.textContent = '$' + Math.abs(weekNet).toFixed(2) + (weekNet >= 0 ? ' ▲' : ' ▼');
+  netEl.style.color = weekNet >= 0 ? '#2ed573' : '#e94560';
+
+  el.innerHTML = weekLoads.map(l => `
+    <div class="card" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#f0f0f0">${l.order || 'Load'}</div>
+          <div style="font-size:13px;color:#888;margin-top:2px">${l.pickup || '—'} → ${l.delivery || '—'}</div>
+          <div style="font-size:12px;color:#555;margin-top:2px">${l.miles ? l.miles + ' mi · $' + l.rpm + '/mi' : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:700;color:#2ed573">$${parseFloat(l.rate||0).toFixed(2)}</div>
+          <button onclick="deleteLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e94560;font-size:12px;padding:4px 8px;cursor:pointer;margin-top:4px">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function deleteLoad(id) {
+  weekLoads = weekLoads.filter(l => l.id !== id);
+  saveWeekLoads();
+  renderLoads();
+  showToast('Load removed');
+}
+
+function confirmNewWeek() {
+  if (confirm('Start a new week? This clears all current loads.')) {
+    weekLoads = [];
+    saveWeekLoads();
+    renderLoads();
+    showToast('New week started ✅');
+  }
 }
 
 </script>
