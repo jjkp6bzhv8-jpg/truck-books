@@ -1421,13 +1421,19 @@ async function scanEldWithAI(file) {
     setAway(eldCurrentResult.away_from_home);
 
     // If AI says at home with 0 miles, check if previous log was away (possible 34hr reset)
-    const prevLog = eldLogs[0];
-    if (!eldCurrentResult.away_from_home && (!eldCurrentResult.miles || parseInt(eldCurrentResult.miles) === 0) && prevLog && prevLog.awayFromHome) {
-      setAway(true);
-      eldCurrentResult.away_from_home = true;
-      setTimeout(function() {
-        showToast('⚠️ Previous log was away — marked as Away. Check toggle if you were home.');
-      }, 500);
+    if (!eldCurrentResult.away_from_home && (!eldCurrentResult.miles || parseInt(eldCurrentResult.miles) === 0)) {
+      // Find the log closest in date before this one
+      const scanDate = eldCurrentResult.date ? parseReceiptDate(eldCurrentResult.date, null) : null;
+      const prevLog = scanDate ? eldLogs.find(function(l) {
+        return l.date && parseReceiptDate(l.date, l.savedAt) < scanDate;
+      }) : eldLogs[0];
+      if (prevLog && prevLog.awayFromHome) {
+        setAway(true);
+        eldCurrentResult.away_from_home = true;
+        setTimeout(function() {
+          showToast('⚠️ Previous log was away — marked as Away. Check toggle if you were home.');
+        }, 500);
+      }
     }
 
     document.getElementById('eldAiRows').innerHTML = `
