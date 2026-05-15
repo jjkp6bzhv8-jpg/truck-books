@@ -1891,19 +1891,26 @@ async function saveSettlement() {
   showLoading('Uploading settlement to Google Drive...');
   try {
     const id = Date.now().toString();
-    // Upload first page as the main photo
-    const compressed = await compress(settlementPages[0].blob, 1200, 0.75);
-    const photoBlob = await fetch(compressed).then(r => r.blob());
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify({ name: `settlement_${id}.jpg`, parents: [folderId] })], { type: 'application/json' }));
-    form.append('file', photoBlob);
-    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
-    }).then(r => r.json());
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
+    // Upload all pages to Drive
+    const photoFileIds = [];
+    let firstCompressed = null;
+    for (let i = 0; i < settlementPages.length; i++) {
+      updateLoading('Uploading page ' + (i+1) + ' of ' + settlementPages.length + '...');
+      const compressed = await compress(settlementPages[i].blob, 1200, 0.75);
+      if (i === 0) firstCompressed = compressed;
+      const photoBlob = await fetch(compressed).then(r => r.blob());
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({ name: 'settlement_' + id + '_p' + (i+1) + '.jpg', parents: [folderId] })], { type: 'application/json' }));
+      form.append('file', photoBlob);
+      const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
+      }).then(r => r.json());
+      await fetch('https://www.googleapis.com/drive/v3/files/' + up.id + '/permissions', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+      photoFileIds.push(up.id);
+    }
     updateLoading('Saving settlement record...');
     const totalDeductions = parseFloat(settlementCurrentResult.totalDeductions || 0);
     const net = parseFloat((parseFloat(settlementCurrentResult.gross) - totalDeductions).toFixed(2));
@@ -1916,8 +1923,9 @@ async function saveSettlement() {
       net,
       settlementType,
       pageCount: settlementPages.length,
-      photoFileId: up.id,
-      photoThumb: compressed,
+      photoFileId: photoFileIds[0],
+      photoFileIds: photoFileIds,
+      photoThumb: firstCompressed,
       savedAt: new Date().toISOString()
     });
     settlements.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -1936,7 +1944,10 @@ function renderSettlements() {
   el.innerHTML = settlements.map(function(s) {
     const counted = (s.deductions||[]).filter(function(d) { return !d.skip; });
     const photoImg = s.photoThumb ? '<img class="receipt-full-img" src="' + s.photoThumb + '">' : '';
-    const photoLink = s.photoFileId ? '<a href="https://drive.google.com/file/d/' + s.photoFileId + '/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:10px">📎 View Full Photo in Google Drive</a>' : '';
+    const fileIds = s.photoFileIds && s.photoFileIds.length ? s.photoFileIds : (s.photoFileId ? [s.photoFileId] : []);
+    const photoLink = fileIds.map(function(fid, idx) {
+      return '<a href="https://drive.google.com/file/d/' + fid + '/view" target="_blank" style="display:block;text-align:center;color:#e94560;font-size:13px;margin-bottom:6px">📎 View Page ' + (idx+1) + ' in Google Drive</a>';
+    }).join('');
     const typeLabel = s.settlementType === 'catchup' ? ' <span style="color:#e94560;font-size:11px">[YTD]</span>' : '';
     const deductionRows = (s.deductions||[]).map(function(d) {
       return '<div class="deduction-row"><span class="deduction-label">' + d.label + (d.category ? ' <span style="color:#555;font-size:11px">['+d.category+']</span>' : '') + '</span><span class="' + (d.skip?'deduction-skipped':'deduction-value') + '">' + (d.skip?'skipped (fuel)':'-$'+fmt(d.amount)) + '</span></div>';
