@@ -489,6 +489,10 @@
               <div class="sc-icon">🖼️</div>
               From Library
             </div>
+            <div class="scan-choice-btn" onclick="showManualReceiptEntry()">
+              <div class="sc-icon">✏️</div>
+              Manual Entry
+            </div>
           </div>
           <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(this)" style="display:none">
           <input type="file" id="libraryInput" accept="image/*" onchange="handlePhoto(this)" style="display:none">
@@ -933,6 +937,46 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="manualReceiptModal">
+  <div class="modal" style="width:100%;max-width:400px">
+    <h3>✏️ Manual Receipt Entry</h3>
+    <div style="margin-bottom:12px">
+      <label style="font-size:13px;color:#888;display:block;margin-bottom:4px">Vendor</label>
+      <input id="manualVendor" type="text" placeholder="e.g. Pilot Flying J" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#f0f0f0;font-size:15px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:13px;color:#888;display:block;margin-bottom:4px">Date</label>
+      <input id="manualDate" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#f0f0f0;font-size:15px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:13px;color:#888;display:block;margin-bottom:4px">Amount</label>
+      <input id="manualAmount" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#f0f0f0;font-size:15px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;color:#888;display:block;margin-bottom:4px">Category</label>
+      <select id="manualCategory" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#f0f0f0;font-size:15px;box-sizing:border-box">
+        <option value="Fuel">Fuel</option>
+        <option value="Truck Maintenance">Truck Maintenance</option>
+        <option value="Truck Payment">Truck Payment</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Permits & Licensing">Permits &amp; Licensing</option>
+        <option value="Tolls">Tolls</option>
+        <option value="Meals">Meals</option>
+        <option value="Hotel/Lodging">Hotel/Lodging</option>
+        <option value="Phone">Phone</option>
+        <option value="Scales/Weigh Stations">Scales/Weigh Stations</option>
+        <option value="Office/Admin">Office/Admin</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-dark" onclick="closeManualReceiptModal()">Cancel</button>
+      <button class="btn btn-red" onclick="saveManualReceipt()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner" style="display:block"></div>
@@ -1560,6 +1604,52 @@ function toggleEld(id) { document.getElementById(id).classList.toggle('open'); }
 
 function delEldLog(id, fid) { eldDeleteId = id; eldDeleteFileId = fid; document.getElementById('deleteEldModal').classList.add('open'); }
 function closeEldModal() { document.getElementById('deleteEldModal').classList.remove('open'); eldDeleteId = null; eldDeleteFileId = null; }
+
+function showManualReceiptEntry() {
+  // Set today's date as default
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('manualDate').value = today;
+  document.getElementById('manualVendor').value = '';
+  document.getElementById('manualAmount').value = '';
+  document.getElementById('manualCategory').value = 'Fuel';
+  document.getElementById('manualReceiptModal').classList.add('open');
+}
+
+function closeManualReceiptModal() {
+  document.getElementById('manualReceiptModal').classList.remove('open');
+}
+
+async function saveManualReceipt() {
+  const vendor = document.getElementById('manualVendor').value.trim();
+  const dateRaw = document.getElementById('manualDate').value;
+  const amount = parseFloat(document.getElementById('manualAmount').value);
+  const category = document.getElementById('manualCategory').value;
+
+  if (!vendor) { alert('Please enter a vendor name.'); return; }
+  if (!dateRaw) { alert('Please enter a date.'); return; }
+  if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount.'); return; }
+
+  // Convert date from YYYY-MM-DD to MM/DD/YYYY
+  const parts = dateRaw.split('-');
+  const date = parts[1] + '/' + parts[2] + '/' + parts[0];
+
+  closeManualReceiptModal();
+  showLoading('Saving receipt...');
+
+  try {
+    const id = 'manual_' + Date.now();
+    receipts.unshift({ id, vendor, date, amount, category, notes: '', gallons: '', odometer: '', mpg: '', photoFileId: null, photoThumb: null, manual: true, savedAt: new Date().toISOString() });
+    receipts.sort(function(a,b){ var da=a.date?new Date(a.date):new Date(a.savedAt); var db=b.date?new Date(b.date):new Date(b.savedAt); return db-da; });
+    await saveIndex();
+    hideLoading();
+    showToast('Receipt saved! ✅');
+    renderReceipts();
+  } catch(e) {
+    hideLoading();
+    alert('Error saving receipt: ' + e.message);
+  }
+}
+
 async function confirmEldDelete() {
   if (!eldDeleteId) return;
   const idToDelete = eldDeleteId;
@@ -1912,7 +2002,7 @@ function renderReceipts() {
   el.innerHTML = list.map(r => `
     <div class="receipt-item">
       <div class="receipt-item-header" onclick="toggle('d${r.id}')">
-        ${r.photoThumb ? `<img class="receipt-thumb" src="${r.photoThumb}">` : '<div class="receipt-thumb-placeholder">🧾</div>'}
+        ${r.photoThumb ? `<img class="receipt-thumb" src="${r.photoThumb}">` : `<div class="receipt-thumb-placeholder">${r.manual ? '✏️' : '🧾'}</div>`}
         <div class="receipt-info"><div class="receipt-vendor">${r.vendor}</div><div class="receipt-meta">${r.date} · ${r.category}</div></div>
         <div class="receipt-amount">$${fmt(r.amount)}</div>
       </div>
