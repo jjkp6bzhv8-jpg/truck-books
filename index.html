@@ -2938,9 +2938,13 @@ async function handleLoadPhoto(input) {
       ]}]})
     });
     const d = await resp.json();
-    const result = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    if (!d.content || !d.content[0] || !d.content[0].text) throw new Error('No response from AI');
+    const raw = d.content[0].text.replace(/```json|```/g,'').trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in response');
+    const result = JSON.parse(jsonMatch[0]);
     addLoad(result);
-  } catch(e) { showToast('Could not read load. Try manual entry.'); console.error(e); }
+  } catch(e) { showToast('Could not read load: ' + e.message); console.error(e); }
   document.getElementById('loadSpinner').style.display = 'none';
   input.value = '';
 }
