@@ -562,15 +562,11 @@
 
   <!-- P&L TAB -->
   <div class="section" id="tab-pl">
-    <div class="filter-row" style="flex-wrap:wrap;gap:6px">
+    <div class="filter-row">
       <div class="filter-btn" onclick="setFilter('year',this)">This Year</div>
       <div class="filter-btn" onclick="setFilter('month',this)">This Month</div>
       <div class="filter-btn active" onclick="setFilter('week',this)">This Week</div>
       <div class="filter-btn" onclick="setFilter('pick',this)">Pick Month</div>
-      <div class="filter-btn" style="flex-basis:100%" onclick="setFilter('payperiod',this)">📅 Pay Period</div>
-    </div>
-    <div id="plPayPeriodRow" style="display:none;margin-bottom:12px">
-      <select id="plPayPeriodSelect" onchange="renderPL()" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;font-family:inherit;outline:none"></select>
     </div>
     <div id="plPickerRow" style="display:none;gap:8px;margin-bottom:12px">
       <select id="plPickMonth" onchange="renderPL()" style="flex:1">
@@ -2167,14 +2163,6 @@ function filteredReceipts() {
       const y = parseInt(document.getElementById('plPickYear')?.value ?? now.getFullYear());
       return d.getFullYear() === y && d.getMonth() === m;
     }
-    if (activeFilter === 'payperiod') {
-      const sel = document.getElementById('plPayPeriodSelect');
-      if (!sel || !sel.value) return false;
-      const parts = sel.value.split('-');
-      const start = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]), 0, 0, 0, 0);
-      const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
-      return d >= start && d <= end;
-    }
     return true;
   });
 }
@@ -2199,17 +2187,6 @@ function filteredSettlements() {
       const y = parseInt(document.getElementById('plPickYear')?.value ?? now.getFullYear());
       return d.getFullYear() === y && d.getMonth() === m;
     }
-    if (activeFilter === 'payperiod') {
-      if (isYTD) return false;
-      const sel = document.getElementById('plPayPeriodSelect');
-      if (!sel || !sel.value) return false;
-      const parts = sel.value.split('-');
-      const start = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]), 0, 0, 0, 0);
-      const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
-      // Subtract 1 day from settlement date so a Thursday-dated settlement matches the prior Thu-Wed window
-      const dAdj = new Date(d); dAdj.setDate(d.getDate() - 1);
-      return dAdj >= start && dAdj <= end;
-    }
     return true;
   });
 }
@@ -2221,7 +2198,7 @@ function setFilter(f, btn) {
   const payPeriodRow = document.getElementById('plPayPeriodRow');
   if (f === 'pick') {
     pickerRow.style.display = 'flex';
-    payPeriodRow.style.display = 'none';
+    if (payPeriodRow) payPeriodRow.style.display = 'none';
     const years = new Set([new Date().getFullYear()]);
     receipts.forEach(r => { const d = parseReceiptDate(r.date, r.savedAt); years.add(d.getFullYear()); });
     settlements.forEach(s => { const d = parseReceiptDate(s.date, s.savedAt); years.add(d.getFullYear()); });
@@ -2229,31 +2206,9 @@ function setFilter(f, btn) {
     const yearSel = document.getElementById('plPickYear');
     yearSel.innerHTML = sorted.map(y => `<option value="${y}">${y}</option>`).join('');
     document.getElementById('plPickMonth').value = new Date().getMonth();
-  } else if (f === 'payperiod') {
-    pickerRow.style.display = 'none';
-    payPeriodRow.style.display = 'block';
-    // Build list of pay periods (Thu-Wed) going back 26 weeks
-    const sel = document.getElementById('plPayPeriodSelect');
-    const now = new Date();
-    const day = now.getDay();
-    const daysFromThursday = (day + 3) % 7;
-    const currentThursday = new Date(now);
-    currentThursday.setHours(0,0,0,0);
-    currentThursday.setDate(now.getDate() - daysFromThursday);
-    const options = [];
-    for (let i = 0; i < 26; i++) {
-      const thu = new Date(currentThursday);
-      thu.setDate(currentThursday.getDate() - (i * 7));
-      const wed = new Date(thu);
-      wed.setDate(thu.getDate() + 6);
-      const label = thu.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + wed.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      const val = thu.getFullYear() + '-' + String(thu.getMonth()+1).padStart(2,'0') + '-' + String(thu.getDate()).padStart(2,'0');
-      options.push(`<option value="${val}">${label}</option>`);
-    }
-    sel.innerHTML = options.join('');
   } else {
     pickerRow.style.display = 'none';
-    payPeriodRow.style.display = 'none';
+    if (payPeriodRow) payPeriodRow.style.display = 'none';
   }
   renderPL();
 }
