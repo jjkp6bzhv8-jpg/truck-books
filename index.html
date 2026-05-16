@@ -2170,7 +2170,8 @@ function filteredReceipts() {
     if (activeFilter === 'payperiod') {
       const sel = document.getElementById('plPayPeriodSelect');
       if (!sel || !sel.value) return false;
-      const start = new Date(sel.value);
+      const parts = sel.value.split('-');
+      const start = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]), 0, 0, 0, 0);
       const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
       return d >= start && d <= end;
     }
@@ -2202,7 +2203,8 @@ function filteredSettlements() {
       if (isYTD) return false;
       const sel = document.getElementById('plPayPeriodSelect');
       if (!sel || !sel.value) return false;
-      const start = new Date(sel.value);
+      const parts = sel.value.split('-');
+      const start = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]), 0, 0, 0, 0);
       const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
       return d >= start && d <= end;
     }
@@ -2243,7 +2245,7 @@ function setFilter(f, btn) {
       const wed = new Date(thu);
       wed.setDate(thu.getDate() + 6);
       const label = thu.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + wed.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      const val = thu.toISOString().split('T')[0];
+      const val = thu.getFullYear() + '-' + String(thu.getMonth()+1).padStart(2,'0') + '-' + String(thu.getDate()).padStart(2,'0');
       options.push(`<option value="${val}">${label}</option>`);
     }
     sel.innerHTML = options.join('');
