@@ -544,7 +544,7 @@
               <select id="mixedCategory" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px">
                 <option>Fuel</option><option>Truck Maintenance</option><option>Truck Payment</option><option>Insurance</option>
                 <option>Permits &amp; Licensing</option><option>Tolls</option><option>Meals</option><option>Hotel/Lodging</option>
-                <option>Office/Admin</option><option>Phone</option><option>Scales/Weigh Stations</option><option>Truck Supplies</option><option>Other</option>
+                <option>Office/Admin</option><option>Phone</option><option>Scales/Weigh Stations</option><option>Truck Supplies</option><option>Tools &amp; Equipment</option><option>Other</option>
               </select>
               <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:10px;display:block">Vendor</label>
               <input type="text" id="mixedVendor" placeholder="Vendor name" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px">
@@ -972,6 +972,8 @@
         <option value="Phone">Phone</option>
         <option value="Scales/Weigh Stations">Scales/Weigh Stations</option>
         <option value="Office/Admin">Office/Admin</option>
+        <option value="Truck Supplies">Truck Supplies</option>
+        <option value="Tools &amp; Equipment">Tools &amp; Equipment</option>
         <option value="Other">Other</option>
       </select>
     </div>
@@ -1307,7 +1309,7 @@ async function scanWithAI(file) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
-        { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Other","gallons":"","odometer":""}. For gallons and odometer: only fill in if this is a Fuel receipt AND the value is clearly printed on the receipt. Otherwise leave as empty string.' }
+        { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Truck Supplies or Tools & Equipment or Other","gallons":"","odometer":""}. For gallons and odometer: only fill in if this is a Fuel receipt AND the value is clearly printed on the receipt. Otherwise leave as empty string.' }
       ]}]})
     });
     const d = await r.json();
@@ -2717,7 +2719,7 @@ async function scanMixedWithAI(file) {
         max_tokens: 2000,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
-          { type: 'text', text: 'Read this mixed receipt (like Walmart or Costco). Extract: vendor name, date (MM/DD/YYYY), and every line item. For each line item determine if it is a business expense or personal. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","category":"Fuel or Truck Maintenance or Truck Supplies or Meals or Office/Admin or Phone or Other","items":[{"name":"item name","amount":"9.99","type":"business or personal"}]}. Be accurate — truck supplies, office supplies, phone accessories, food for the truck = business. Personal clothing, household items, entertainment = personal.' }
+          { type: 'text', text: 'Read this mixed receipt (like Walmart or Costco). Extract: vendor name, date (MM/DD/YYYY), and every line item. For each line item determine if it is a business expense or personal. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","category":"Fuel or Truck Maintenance or Truck Supplies or Tools & Equipment or Meals or Office/Admin or Phone or Other","items":[{"name":"item name","amount":"9.99","type":"business or personal"}]}. Be accurate — truck supplies, office supplies, phone accessories, food for the truck = business. Personal clothing, household items, entertainment = personal.' }
         ]}]
       })
     });
