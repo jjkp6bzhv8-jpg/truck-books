@@ -1307,7 +1307,7 @@ async function scanWithAI(file) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
         { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Truck Supplies or Tools & Equipment or Other","gallons":"","odometer":""}. For gallons and odometer: only fill in if this is a Fuel receipt AND the value is clearly printed on the receipt. Otherwise leave as empty string.' }
       ]}]})
@@ -1407,7 +1407,7 @@ async function scanEldWithAI(file) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 200, messages: [{ role: 'user', content: [
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 200, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
         { type: 'text', text: 'This is a truck driver ELD log. Read it and respond ONLY with JSON: {"date":"MM/DD/YYYY","miles":"350","away_from_home":true}. Set away_from_home to true if the driver appears to have been on the road away from home, false if at home/off duty all day. CRITICAL: For the date, if no year is visible on the log, always assume the current year ' + new Date().getFullYear() + '. Never guess a past year unless it is clearly printed on the log.' }
       ]}]})
@@ -1857,7 +1857,7 @@ async function processAllSettlementPages() {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 2000, messages: [{ role: 'user', content: content_parts }]})
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, messages: [{ role: 'user', content: content_parts }]})
     });
     const d = await r.json();
     settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
@@ -2368,7 +2368,7 @@ async function scanBolWithAI(file) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
         { type: 'text', text: 'This is a Bill of Lading (BOL). Read it and respond ONLY with JSON: {"bol_number":"","date":"MM/DD/YYYY","shipper":"","consignee":"","pickup_city":"City, ST","delivery_city":"City, ST"}. Fill in every field you can clearly read. If a field is not visible or readable, leave it as empty string.' }
       ]}]})
@@ -2715,7 +2715,7 @@ async function scanMixedWithAI(file) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
@@ -3018,7 +3018,7 @@ async function handleLoadPhoto(input) {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 500, messages: [{ role: 'user', content: [
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 500, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
         { type: 'text', text: 'Read this load confirmation. Respond ONLY with JSON: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00}' }
       ]}]})
