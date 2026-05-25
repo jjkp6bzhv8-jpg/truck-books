@@ -2872,7 +2872,7 @@ function renderMixedReceipts() {
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="receipt-amount">$${fmt(parseFloat(r.amount))}</div>
-          <button class="delete-btn" onclick="event.stopPropagation();delMixedReceipt('${r.id}','${r.photoFileId}')">🗑️</button>
+          <button onclick="event.stopPropagation();delMixedReceipt('${r.id}','${r.photoFileId}')" style="background:rgba(233,69,96,0.1);color:#e94560;border:1px solid #e94560;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;">🗑️</button>
         </div>
       </div>
       <div class="receipt-detail" id="mxd_${r.id}" style="display:none">
