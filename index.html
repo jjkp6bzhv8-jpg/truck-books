@@ -2708,7 +2708,8 @@ async function scanMixedWithAI(file) {
   document.getElementById('mixedAiResult').style.display = 'none';
   document.getElementById('mixedSaveBtn').style.display = 'none';
 
-  const base64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(file); });
+  const b64 = await compress(file, 1000, 0.8);
+  const base64 = b64.split(',')[1];
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2718,7 +2719,7 @@ async function scanMixedWithAI(file) {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
         messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
           { type: 'text', text: 'Read this mixed receipt (like Walmart or Costco). Extract: vendor name, date (MM/DD/YYYY), and every line item. For each line item determine if it is a business expense or personal. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","category":"Fuel or Truck Maintenance or Truck Supplies or Tools & Equipment or Meals or Office/Admin or Phone or Other","items":[{"name":"item name","amount":"9.99","type":"business or personal"}]}. Be accurate — truck supplies, office supplies, phone accessories, food for the truck = business. Personal clothing, household items, entertainment = personal.' }
         ]}]
       })
