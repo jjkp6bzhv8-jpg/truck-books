@@ -2725,10 +2725,12 @@ async function scanMixedWithAI(file) {
       })
     });
     const data = await resp.json();
-    const text = data.content[0].text;
-    const clean = text.replace(/```json|```/g, '').trim();
+    console.log("Mixed API response:", JSON.stringify(data));
+    if (data.error) throw new Error("API: " + data.error.message);
+    const text = (data.content&&data.content[0]) ? data.content[0].text : "";
+    if (!text) throw new Error("Empty response");
+    const clean = text.replace(/```json|```/g, "").trim();
     const result = JSON.parse(clean);
-
     mixedLineItemsData = result.items.map((item, i) => ({ ...item, id: i, amount: parseFloat(item.amount) || 0 }));
 
     document.getElementById('mixedVendor').value = result.vendor || '';
@@ -2743,7 +2745,7 @@ async function scanMixedWithAI(file) {
     document.getElementById('mixedSaveBtn').style.display = 'block';
   } catch(e) {
     document.getElementById('mixedSpinner').style.display = 'none';
-    showToast('Could not read receipt. Try again.');
+    showToast('Error: ' + e.message.substring(0,40));
     console.error(e);
   }
 }
