@@ -2708,7 +2708,8 @@ async function scanMixedWithAI(file) {
   document.getElementById('mixedAiResult').style.display = 'none';
   document.getElementById('mixedSaveBtn').style.display = 'none';
 
-  const base64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(",")[1]); r.readAsDataURL(file); });
+  const b64 = await compress(file, 1200, 0.85);
+  const base64 = b64.split(",")[1];
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
