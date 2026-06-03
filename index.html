@@ -3025,7 +3025,7 @@ async function handleLoadPhoto(input) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
-        { type: 'text', text: 'Read this load confirmation. Respond ONLY with JSON: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00}' }
+        { type: 'text', text: 'Read this load confirmation and extract the order number, pickup, delivery, miles, and rate. Respond ONLY with valid JSON, no explanation or preamble: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00}' }
       ]}]})
     });
     const d = await resp.json();
