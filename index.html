@@ -2225,8 +2225,14 @@ function renderPL() {
 
   // Settlement deduction expenses (non-fuel)
   const settlementDeductionTotal = sList.reduce((s, sv) => {
-    if (sv.totalDeductions) return s + parseFloat(sv.totalDeductions);
-    return s + (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0) > 0).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+    let total = sv.totalDeductions ? parseFloat(sv.totalDeductions) : (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0) > 0).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+    // Multi-settlement views: a "Balance Forward" line is just last week's shortfall re-billed.
+    // Skip it here so it isn't counted as an expense twice across weeks.
+    if (sList.length > 1) {
+      const balFwd = (sv.deductions||[]).filter(d => /balance\s*forward|balfwd/i.test(d.label||'')).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+      total -= balFwd;
+    }
+    return s + total;
   }, 0);
 
   const totalExpenses = receiptExpenses + settlementDeductionTotal;
@@ -2280,7 +2286,11 @@ function renderHome() {
   const yearReceipts = receipts.filter(r => new Date(r.savedAt).getFullYear() === year);
   const yearSettlements = settlements.filter(s => new Date(s.savedAt).getFullYear() === year);
   const receiptExpenses = yearReceipts.filter(r => r.category !== 'Fuel').reduce((s,r) => s + r.amount, 0);
-  const settlementDeductions = yearSettlements.reduce((s,sv) => s + (sv.totalDeductions ? parseFloat(sv.totalDeductions) : (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0)>0).reduce((a,d)=>a+parseFloat(d.amount||0),0)), 0);
+  const settlementDeductions = yearSettlements.reduce((s,sv) => {
+    let total = sv.totalDeductions ? parseFloat(sv.totalDeductions) : (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0)>0).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+    const balFwd = (sv.deductions||[]).filter(d => /balance\s*forward|balfwd/i.test(d.label||'')).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+    return s + total - balFwd;
+  }, 0);
   const totalExpenses = receiptExpenses + settlementDeductions;
   const totalIncome = yearSettlements.reduce((s,sv) => s + sv.gross, 0);
   const net = totalIncome - totalExpenses;
