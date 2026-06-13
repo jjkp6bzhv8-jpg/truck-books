@@ -2220,8 +2220,8 @@ function renderPL() {
   const sList = filteredSettlements();
   const totalIncome = sList.reduce((s,r) => s + r.gross, 0);
 
-  // Receipt expenses
-  const receiptExpenses = rList.reduce((s,r) => s + r.amount, 0);
+  // Receipt expenses (excludes Fuel - Comdata fuel is already included in settlement deductions)
+  const receiptExpenses = rList.filter(r => r.category !== 'Fuel').reduce((s,r) => s + r.amount, 0);
 
   // Settlement deduction expenses (non-fuel)
   const settlementDeductionTotal = sList.reduce((s, sv) => {
@@ -2279,7 +2279,7 @@ function renderHome() {
   const year = now.getFullYear();
   const yearReceipts = receipts.filter(r => new Date(r.savedAt).getFullYear() === year);
   const yearSettlements = settlements.filter(s => new Date(s.savedAt).getFullYear() === year);
-  const receiptExpenses = yearReceipts.reduce((s,r) => s + r.amount, 0);
+  const receiptExpenses = yearReceipts.filter(r => r.category !== 'Fuel').reduce((s,r) => s + r.amount, 0);
   const settlementDeductions = yearSettlements.reduce((s,sv) => s + (sv.totalDeductions ? parseFloat(sv.totalDeductions) : (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0)>0).reduce((a,d)=>a+parseFloat(d.amount||0),0)), 0);
   const totalExpenses = receiptExpenses + settlementDeductions;
   const totalIncome = yearSettlements.reduce((s,sv) => s + sv.gross, 0);
