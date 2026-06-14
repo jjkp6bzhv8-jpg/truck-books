@@ -849,6 +849,7 @@
       </div>
       <button class="btn btn-red" onclick="generateExport()">📄 Generate Report</button>
       <button class="btn btn-dark" onclick="exportReceiptPhotos()" style="margin-top:8px">🖼️ Export Receipt Photos (PDF)</button>
+      <button class="btn btn-dark" onclick="exportEldPhotos()" style="margin-top:8px">🖼️ Export ELD Log Photos (PDF)</button>
     </div>
   </div>
 
@@ -2694,6 +2695,72 @@ async function exportReceiptPhotos() {
   } catch (e) {
     hideLoading();
     showToast('Error building PDF: ' + e.message);
+  }
+}
+
+// ── EXPORT ELD LOG PHOTOS AS PDF ──
+async function exportEldPhotos() {
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+
+  let list = eldLogs.filter(e => exportDateFilter(e.date, e.savedAt, from, to));
+  list = list.slice().sort((a, b) => parseReceiptDate(a.date, a.savedAt) - parseReceiptDate(b.date, b.savedAt));
+
+  const withPhoto = list.filter(e => e.photoThumb);
+  const skipped = list.length - withPhoto.length;
+
+  if (!withPhoto.length) {
+    showToast(skipped ? `${skipped} log(s) have no saved photo` : 'No ELD logs found for this range');
+    return;
+  }
+
+  showLoading('Loading PDF tools...');
+  try {
+    if (!window.jspdf) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 36;
+
+    for (let i = 0; i < withPhoto.length; i++) {
+      const e = withPhoto[i];
+      updateLoading(`Adding log ${i + 1} of ${withPhoto.length}...`);
+      if (i > 0) doc.addPage();
+
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${e.date || '—'}   Miles: ${e.miles || '—'}   Away From Home: ${e.awayFromHome ? 'Yes' : 'No'}`, margin, margin);
+      doc.setFont(undefined, 'normal');
+
+      const imgTop = margin + 20;
+      const availW = pageW - margin * 2;
+      const availH = pageH - imgTop - margin;
+
+      const { w, h } = await imgDims(e.photoThumb);
+      let drawW = availW, drawH = (h / w) * drawW;
+      if (drawH > availH) { drawH = availH; drawW = (w / h) * drawH; }
+      const x = margin + (availW - drawW) / 2;
+
+      doc.addImage(e.photoThumb, 'JPEG', x, imgTop, drawW, drawH);
+    }
+
+    const fname = `TruckBooks_ELDLogs_${from || 'all'}_to_${to || 'all'}.pdf`;
+    doc.save(fname);
+    hideLoading();
+    showToast(skipped ? `Done. ${skipped} log(s) skipped (no photo saved)` : 'PDF saved');
+  } catch (e2) {
+    hideLoading();
+    showToast('Error building PDF: ' + e2.message);
   }
 }
 
