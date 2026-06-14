@@ -2578,12 +2578,12 @@ function generateExport() {
     html += `<div class="section-title">📄 Settlements</div>`;
     if (!list.length) { html += '<p style="color:#888">No settlements found.</p>'; }
     else {
-      let total = 0; let totalNet = 0;
+      let total = 0;
       list.forEach(s => {
         const gross = parseFloat(s.gross)||0;
         const ded = (s.deductions||[]).reduce((a,d)=>a+(parseFloat(d.amount)||0),0);
         const net = gross - ded;
-        total += gross; totalNet += net;
+        total += gross;
         html += `<table style="margin-bottom:6px"><tr><th>Settlement Date</th><th>Gross Pay</th><th>Net Pay</th></tr>
           <tr><td>${s.date||'—'}</td><td>$${fmt(gross)}</td><td>$${fmt(net)}</td></tr></table>`;
         if ((s.deductions||[]).length) {
@@ -2597,7 +2597,7 @@ function generateExport() {
           html += '<div style="margin-bottom:18px"></div>';
         }
       });
-      html += `<div class="total">Total Gross: $${fmt(total)} &nbsp;|&nbsp; Total Net: $${fmt(totalNet)}</div>`;
+      html += `<div class="total">Total Gross: $${fmt(total)}</div>`;
     }
   }
   if (type === 'eld' || type === 'all') {
