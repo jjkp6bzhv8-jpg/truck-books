@@ -848,6 +848,7 @@
         <input type="date" id="exportTo">
       </div>
       <button class="btn btn-red" onclick="generateExport()">📄 Generate Report</button>
+      <button class="btn btn-dark" onclick="exportReceiptPhotos()" style="margin-top:8px">🖼️ Export Receipt Photos (PDF)</button>
     </div>
   </div>
 
@@ -2615,6 +2616,85 @@ function generateExport() {
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
+}
+
+// ── EXPORT RECEIPT PHOTOS AS PDF ──
+function imgDims(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = dataUrl;
+  });
+}
+
+async function exportReceiptPhotos() {
+  const cat = document.getElementById('exportCat')?.value || 'all';
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+
+  let list = receipts.filter(r => exportDateFilter(r.date, r.savedAt, from, to));
+  if (cat !== 'all') list = list.filter(r => r.category === cat);
+  list = list.slice().sort((a, b) => parseReceiptDate(a.date, a.savedAt) - parseReceiptDate(b.date, b.savedAt));
+
+  const withPhoto = list.filter(r => r.photoThumb);
+  const skipped = list.length - withPhoto.length;
+
+  if (!withPhoto.length) {
+    showToast(skipped ? `${skipped} receipt(s) have no saved photo` : 'No receipts found for this range');
+    return;
+  }
+
+  showLoading('Loading PDF tools...');
+  try {
+    if (!window.jspdf) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 36;
+
+    for (let i = 0; i < withPhoto.length; i++) {
+      const r = withPhoto[i];
+      updateLoading(`Adding photo ${i + 1} of ${withPhoto.length}...`);
+      if (i > 0) doc.addPage();
+
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${r.date || '—'}   ${r.vendor || '—'}   $${fmt(parseFloat(r.amount) || 0)}`, margin, margin);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      const caption2 = [r.category, r.notes].filter(Boolean).join('  •  ');
+      if (caption2) doc.text(caption2, margin, margin + 14);
+
+      const imgTop = margin + 28;
+      const availW = pageW - margin * 2;
+      const availH = pageH - imgTop - margin;
+
+      const { w, h } = await imgDims(r.photoThumb);
+      let drawW = availW, drawH = (h / w) * drawW;
+      if (drawH > availH) { drawH = availH; drawW = (w / h) * drawH; }
+      const x = margin + (availW - drawW) / 2;
+
+      doc.addImage(r.photoThumb, 'JPEG', x, imgTop, drawW, drawH);
+    }
+
+    const fname = `TruckBooks_Receipts_${from || 'all'}_to_${to || 'all'}.pdf`;
+    doc.save(fname);
+    hideLoading();
+    showToast(skipped ? `Done. ${skipped} receipt(s) skipped (no photo saved)` : 'PDF saved');
+  } catch (e) {
+    hideLoading();
+    showToast('Error building PDF: ' + e.message);
+  }
 }
 
 // ── RENDER BOLS ──
