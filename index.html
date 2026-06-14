@@ -850,6 +850,7 @@
       <button class="btn btn-red" onclick="generateExport()">📄 Generate Report</button>
       <button class="btn btn-dark" onclick="exportReceiptPhotos()" style="margin-top:8px">🖼️ Export Receipt Photos (PDF)</button>
       <button class="btn btn-dark" onclick="exportEldPhotos()" style="margin-top:8px">🖼️ Export ELD Log Photos (PDF)</button>
+      <button class="btn btn-dark" onclick="exportSettlementPhotos()" style="margin-top:8px">🖼️ Export Settlement Photos (PDF)</button>
     </div>
   </div>
 
@@ -2761,6 +2762,108 @@ async function exportEldPhotos() {
   } catch (e2) {
     hideLoading();
     showToast('Error building PDF: ' + e2.message);
+  }
+}
+
+// ── EXPORT SETTLEMENT PHOTOS AS PDF ──
+async function fetchDriveImageAsDataUrl(fileId) {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) throw new Error('Drive fetch failed');
+  const blob = await r.blob();
+  return await compress(blob, 1200, 0.75);
+}
+
+async function exportSettlementPhotos() {
+  if (!token) { showToast('Sign in to Google Drive first'); return; }
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+
+  let list = settlements.filter(s => exportDateFilter(s.date, s.savedAt, from, to));
+  list = list.slice().sort((a, b) => parseReceiptDate(a.date, a.savedAt) - parseReceiptDate(b.date, b.savedAt));
+
+  // Build page lists, skip settlements with nothing to show
+  const entries = list.map(s => {
+    const fileIds = s.photoFileIds && s.photoFileIds.length ? s.photoFileIds : (s.photoFileId ? [s.photoFileId] : []);
+    return { s, fileIds };
+  }).filter(e => e.fileIds.length || e.s.photoThumb);
+
+  const skipped = list.length - entries.length;
+
+  if (!entries.length) {
+    showToast(skipped ? `${skipped} settlement(s) have no saved photo` : 'No settlements found for this range');
+    return;
+  }
+
+  showLoading('Loading PDF tools...');
+  try {
+    if (!window.jspdf) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 36;
+    let firstPage = true;
+    let fetchErrors = 0;
+
+    for (let i = 0; i < entries.length; i++) {
+      const { s, fileIds } = entries[i];
+      const pageCount = fileIds.length || 1;
+
+      for (let p = 0; p < pageCount; p++) {
+        updateLoading(`Settlement ${i + 1} of ${entries.length}, page ${p + 1} of ${pageCount}...`);
+        let imgData = null;
+        if (p === 0 && s.photoThumb) {
+          imgData = s.photoThumb;
+        } else if (fileIds[p]) {
+          try { imgData = await fetchDriveImageAsDataUrl(fileIds[p]); }
+          catch (err) { fetchErrors++; continue; }
+        }
+        if (!imgData) continue;
+
+        if (!firstPage) doc.addPage();
+        firstPage = false;
+
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        if (p === 0) {
+          doc.text(`${s.date || '—'}   Gross: $${fmt(parseFloat(s.gross) || 0)}   Net: $${fmt(parseFloat(s.net) || 0)}   (Page ${p + 1} of ${pageCount})`, margin, margin);
+        } else {
+          doc.text(`${s.date || '—'}   (Page ${p + 1} of ${pageCount})`, margin, margin);
+        }
+        doc.setFont(undefined, 'normal');
+
+        const imgTop = margin + 20;
+        const availW = pageW - margin * 2;
+        const availH = pageH - imgTop - margin;
+
+        const { w, h } = await imgDims(imgData);
+        let drawW = availW, drawH = (h / w) * drawW;
+        if (drawH > availH) { drawH = availH; drawW = (w / h) * drawH; }
+        const x = margin + (availW - drawW) / 2;
+
+        doc.addImage(imgData, 'JPEG', x, imgTop, drawW, drawH);
+      }
+    }
+
+    const fname = `TruckBooks_Settlements_${from || 'all'}_to_${to || 'all'}.pdf`;
+    doc.save(fname);
+    hideLoading();
+    let msg = 'PDF saved';
+    if (skipped) msg += `. ${skipped} settlement(s) skipped (no photo saved)`;
+    if (fetchErrors) msg += `. ${fetchErrors} page(s) failed to load from Drive`;
+    showToast(msg);
+  } catch (e) {
+    hideLoading();
+    showToast('Error building PDF: ' + e.message);
   }
 }
 
