@@ -1338,7 +1338,12 @@ async function scanWithAI(file) {
       <div class="result-row"><span class="result-label">Vendor</span><span class="result-value">${currentResult.vendor}</span></div>
       <div class="result-row"><span class="result-label">Date</span><span class="result-value">${currentResult.date}</span></div>
       <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$${fmt(parseFloat(currentResult.amount))}</span></div>
-      <div class="result-row"><span class="result-label">Category</span><span class="result-value">${currentResult.category}</span></div>
+      <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <span class="result-label">Category</span>
+        <select id="resultCategory" style="font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#f0f0f0;width:100%;box-sizing:border-box" onchange="updateReceiptCategory(this.value)">
+          ${receiptCategoryOptions(currentResult.category)}
+        </select>
+      </div>
       ${isFuel ? `
       <div class="result-row"><span class="result-label">Gallons</span><span class="result-value">${currentResult.gallons || '—'}</span></div>
       <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
@@ -1349,12 +1354,61 @@ async function scanWithAI(file) {
       ` : ''}
       <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
         <span class="result-label">Notes (optional)</span>
-        <input type="text" id="notesInput" placeholder="e.g. Trip to Atlanta" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="currentResult.notes=this.value">
+        <input type="text" id="notesInput" placeholder="e.g. Trip to Atlanta" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="currentResult.notes=this.value" value="${currentResult.notes || ''}">
       </div>`;
     document.getElementById('aiResult').style.display = 'block';
     document.getElementById('saveBtn').style.display = 'block';
   } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
   document.getElementById('spinner').style.display = 'none';
+}
+
+// ── RECEIPT CATEGORY DROPDOWN HELPERS ──
+function receiptCategoryOptions(selected) {
+  const cats = ['Fuel','Truck Maintenance','Truck Payment','Insurance','Permits & Licensing','Tolls','Meals','Hotel/Lodging','Phone','Scales/Weigh Stations','Office/Admin','Truck Supplies','Tools & Equipment','Other'];
+  return cats.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function updateReceiptCategory(val) {
+  currentResult.category = val;
+  const odom = document.getElementById('odometerInput') ? document.getElementById('odometerInput').value : currentResult.odometer;
+  const notes = document.getElementById('notesInput') ? document.getElementById('notesInput').value : currentResult.notes;
+  currentResult.odometer = odom || '';
+  currentResult.notes = notes || '';
+  if (val !== 'Fuel') { currentResult.gallons = ''; currentResult.odometer = ''; currentResult.mpg = ''; }
+  let mpg = currentResult.mpg || '';
+  if (val === 'Fuel' && currentResult.odometer && currentResult.gallons) {
+    const lastFuel = receipts.find(r => r.category === 'Fuel' && r.odometer);
+    if (lastFuel) {
+      const milesDriven = parseFloat(currentResult.odometer) - parseFloat(lastFuel.odometer);
+      const gals = parseFloat(currentResult.gallons);
+      if (milesDriven > 0 && gals > 0) mpg = (milesDriven / gals).toFixed(2);
+    }
+  }
+  currentResult.mpg = mpg;
+
+  const isFuel = val === 'Fuel';
+  document.getElementById('aiResultRows').innerHTML = `
+    <div class="result-row"><span class="result-label">Vendor</span><span class="result-value">${currentResult.vendor}</span></div>
+    <div class="result-row"><span class="result-label">Date</span><span class="result-value">${currentResult.date}</span></div>
+    <div class="result-row"><span class="result-label">Amount</span><span class="result-value">$${fmt(parseFloat(currentResult.amount))}</span></div>
+    <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <span class="result-label">Category</span>
+      <select id="resultCategory" style="font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#f0f0f0;width:100%;box-sizing:border-box" onchange="updateReceiptCategory(this.value)">
+        ${receiptCategoryOptions(currentResult.category)}
+      </select>
+    </div>
+    ${isFuel ? `
+    <div class="result-row"><span class="result-label">Gallons</span><span class="result-value">${currentResult.gallons || '—'}</span></div>
+    <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <span class="result-label">Odometer (optional — for MPG)</span>
+      <input type="number" id="odometerInput" placeholder="e.g. 487250" value="${currentResult.odometer}" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="updateMpg(this.value)">
+    </div>
+    <div class="result-row" id="mpgRow" style="${mpg ? '' : 'display:none'}"><span class="result-label">MPG This Tank</span><span class="result-value" id="mpgValue" style="color:#2ed573">${mpg}</span></div>
+    ` : ''}
+    <div class="result-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <span class="result-label">Notes (optional)</span>
+      <input type="text" id="notesInput" placeholder="e.g. Trip to Atlanta" style="font-size:14px;padding:8px 10px;border-radius:8px;width:100%" oninput="currentResult.notes=this.value" value="${currentResult.notes || ''}">
+    </div>`;
 }
 
 function updateMpg(odomVal) {
