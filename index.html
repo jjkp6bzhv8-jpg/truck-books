@@ -1018,6 +1018,10 @@ function fmt(n) { return parseFloat(n||0).toLocaleString('en-US', { minimumFract
 let token = null;
 let receipts = [];
 let eldLogs = [];
+let receiptsLoaded = false;  // safety flag - never save if load didn't succeed
+let eldLogsLoaded = false;
+let settlementsLoaded = false;
+let bolsLoaded = false;
 let folderId = null;
 let currentPhoto = null;
 let currentPhotoBlob = null;
@@ -1210,6 +1214,7 @@ async function loadReceipts() {
         const parsed = JSON.parse(text);
         if (Array.isArray(parsed)) {
           receipts = parsed;
+          receiptsLoaded = true;
           try {
             receipts.sort((a,b) => {
               const da = a.date ? parseReceiptDate(a.date, a.savedAt) : new Date(a.savedAt || 0);
@@ -1220,7 +1225,8 @@ async function loadReceipts() {
           return; // success
         }
       } else {
-        return; // no file yet
+        receiptsLoaded = true; // no file yet, safe to save
+        return;
       }
     } catch(e) {
       console.error('loadReceipts attempt ' + attempt + ' failed:', e);
@@ -1232,6 +1238,7 @@ async function loadReceipts() {
 }
 
 async function saveIndex() {
+  if (!receiptsLoaded) { console.error("BLOCKED saveIndex: receipts never loaded successfully"); return; }
   const content = JSON.stringify(receipts);
   const blob = new Blob([content], { type: 'application/json' });
   const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
@@ -1258,6 +1265,7 @@ async function loadEldLogs() {
         const parsed = JSON.parse(text);
         if (Array.isArray(parsed)) {
           eldLogs = parsed;
+          eldLogsLoaded = true;
           try {
             eldLogs.sort((a,b) => {
               const da = a.date ? parseReceiptDate(a.date, a.savedAt) : new Date(a.savedAt || 0);
@@ -1267,11 +1275,14 @@ async function loadEldLogs() {
           } catch(se) { console.error('eld sort error', se); }
         }
       } catch(pe) { console.error('eld_logs.json parse error', pe); }
+    } else {
+      eldLogsLoaded = true; // no file yet, safe to save
     }
   } catch(e) { console.error('loadEldLogs fetch error', e); }
 }
 
 async function saveEldIndex() {
+  if (!eldLogsLoaded) { console.error("BLOCKED saveEldIndex: eld logs never loaded successfully"); return; }
   const content = JSON.stringify(eldLogs);
   const blob = new Blob([content], { type: 'application/json' });
   const res = await driveGet(`files?q='${folderId}' in parents and name='eld_logs.json' and trashed=false&fields=files(id)`);
@@ -3600,7 +3611,7 @@ async function recoverReceipts() {
             max_tokens: 300,
             messages: [{ role: 'user', content: [
               { type: 'image', source: { type: 'base64', media_type: blob.type || 'image/jpeg', data: base64 } },
-              { type: 'text', text: 'This is a trucking expense receipt. Extract the vendor name, date (MM/DD/YYYY), total amount, category (Fuel, Truck Maintenance, Meals, Hotel/Lodging, Tolls, Scales/Weigh Stations, Truck Supplies, Tools & Equipment, Permits & Licensing, Phone, Office/Admin, Insurance, Other), gallons (if fuel), and odometer (if shown). Respond ONLY with valid JSON, no explanation: {"vendor":"Love's","date":"06/17/2026","amount":"230.34","category":"Fuel","gallons":"72.3","odometer":"","notes":""}' }
+              { type: 'text', text: 'This is a trucking expense receipt. Extract the vendor name, date (MM/DD/YYYY), total amount, category (Fuel, Truck Maintenance, Meals, Hotel/Lodging, Tolls, Scales/Weigh Stations, Truck Supplies, Tools & Equipment, Permits & Licensing, Phone, Office/Admin, Insurance, Other), gallons (if fuel), and odometer (if shown). Respond ONLY with valid JSON, no explanation: {"vendor":"Loves","date":"06/17/2026","amount":"230.34","category":"Fuel","gallons":"72.3","odometer":"","notes":""}' }
             ]}]
           })
         });
