@@ -3563,9 +3563,8 @@ async function recoverReceipts() {
       pageToken = res.nextPageToken;
     } while (pageToken);
 
-    // Filter out files already in receipts by photoFileId
-    const existingFileIds = new Set(receipts.map(r => r.photoFileId).filter(Boolean));
-    const toRecover = allFiles.filter(f => !existingFileIds.has(f.id));
+    // Force reprocess all receipt photos for fresh thumbnails
+    const toRecover = allFiles;
 
     setStatus(`Found ${allFiles.length} receipt photos. ${toRecover.length} need recovery. Starting AI scan...`);
 
@@ -3623,6 +3622,8 @@ async function recoverReceipts() {
         const thumb = await compressThumb(blob);
 
         const id = file.id + '_recovered';
+        // Remove existing entry for this photo if present
+        receipts = receipts.filter(r => r.photoFileId !== file.id);
         receipts.push({
           id,
           vendor: result.vendor || 'Unknown',
