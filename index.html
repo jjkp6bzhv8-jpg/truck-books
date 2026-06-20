@@ -1182,20 +1182,33 @@ async function drivePost(path, body) {
 
 // ── LOAD RECEIPTS ──
 async function loadReceipts() {
-  try {
-    const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
-    if (res.files && res.files.length) {
-      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
-      const text = await r.text();
-      try {
-        const parsed = JSON.parse(text);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
+      if (res.files && res.files.length) {
+        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const text = await r.text();
+        const parsed = JSON.parse(text); // throws if bad JSON
         if (Array.isArray(parsed)) {
           receipts = parsed;
-          receipts.sort((a,b) => parseReceiptDate(b.date, b.savedAt) - parseReceiptDate(a.date, a.savedAt));
+          try {
+            receipts.sort((a,b) => {
+              const da = a.date ? parseReceiptDate(a.date, a.savedAt) : new Date(a.savedAt || 0);
+              const db = b.date ? parseReceiptDate(b.date, b.savedAt) : new Date(b.savedAt || 0);
+              return db - da;
+            });
+          } catch(se) { console.error('receipts sort error', se); }
+          return; // success
         }
-      } catch(pe) { console.error('receipts.json parse error - keeping existing data', pe); }
+      } else {
+        return; // no file yet, nothing to load
+      }
+    } catch(e) {
+      console.error('loadReceipts attempt ' + attempt + ' failed:', e);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
     }
-  } catch(e) { console.error('loadReceipts fetch error', e); }
+  }
 }
 
 async function saveIndex() {
@@ -1225,9 +1238,15 @@ async function loadEldLogs() {
         const parsed = JSON.parse(text);
         if (Array.isArray(parsed)) {
           eldLogs = parsed;
-          eldLogs.sort((a,b) => parseReceiptDate(b.date, b.savedAt) - parseReceiptDate(a.date, a.savedAt));
+          try {
+            eldLogs.sort((a,b) => {
+              const da = a.date ? parseReceiptDate(a.date, a.savedAt) : new Date(a.savedAt || 0);
+              const db = b.date ? parseReceiptDate(b.date, b.savedAt) : new Date(b.savedAt || 0);
+              return db - da;
+            });
+          } catch(se) { console.error('eld sort error', se); }
         }
-      } catch(pe) { console.error('eld_logs.json parse error - keeping existing data', pe); }
+      } catch(pe) { console.error('eld_logs.json parse error', pe); }
     }
   } catch(e) { console.error('loadEldLogs fetch error', e); }
 }
