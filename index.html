@@ -883,6 +883,12 @@
       <div class="card-title">📋 About TruckBooks</div>
       <p style="font-size:13px;color:#666;line-height:1.6">All receipts and photos are saved to a folder called <strong style="color:#f0f0f0">TruckBooks</strong> in your Google Drive. Your data, your account, forever.</p>
     </div>
+    <div class="card" style="border-color:#e94560">
+      <div class="card-title">🚨 Recover Lost Receipts</div>
+      <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">Scans your Google Drive photos and uses AI to rebuild all your receipts. Run this if your receipt list is missing entries. Takes a few minutes.</p>
+      <div id="recoveryStatus" style="font-size:13px;color:#2ed573;margin-bottom:8px;display:none;line-height:1.6"></div>
+      <button class="btn btn-red" id="recoveryBtn" onclick="recoverReceipts()">🚨 Recover My Receipts</button>
+    </div>
     <div class="card">
       <div class="card-title">⚡ Optimize Data</div>
       <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">Shrinks thumbnails stored in your receipts, ELD logs, settlements, and BOLs. Fixes slow loading and missing data on weak signal. Your photos in Google Drive are NOT affected.</p>
@@ -3516,6 +3522,151 @@ function confirmNewWeek() {
     saveWeekLoads();
     renderLoads();
     showToast('New week started ✅');
+  }
+}
+
+// ── RECOVER RECEIPTS ──
+async function recoverReceipts() {
+  if (!token) return showToast('Sign in to Google Drive first');
+  const key = localStorage.getItem('tb_key');
+  if (!key) return showToast('Add your Anthropic API key in Settings first');
+  if (!confirm('This will scan all your Drive photos and rebuild your receipt list using AI. Your current 3 receipts will be kept. Continue?')) return;
+
+  const btn = document.getElementById('recoveryBtn');
+  const status = document.getElementById('recoveryStatus');
+  btn.disabled = true;
+  status.style.display = 'block';
+
+  function setStatus(msg) { status.textContent = msg; console.log(msg); }
+
+  try {
+    // Get all receipt JPGs from Drive folder
+    setStatus('Scanning Google Drive for receipt photos...');
+    let allFiles = [];
+    let pageToken = null;
+    do {
+      let url = `files?q='${folderId}' in parents and name contains 'receipt_' and trashed=false&fields=files(id,name,createdTime)&pageSize=100`;
+      if (pageToken) url += '&pageToken=' + pageToken;
+      const res = await driveGet(url);
+      if (res.files) allFiles = allFiles.concat(res.files);
+      pageToken = res.nextPageToken;
+    } while (pageToken);
+
+    // Filter out files already in receipts by photoFileId
+    const existingFileIds = new Set(receipts.map(r => r.photoFileId).filter(Boolean));
+    const toRecover = allFiles.filter(f => !existingFileIds.has(f.id));
+
+    setStatus(`Found ${allFiles.length} receipt photos. ${toRecover.length} need recovery. Starting AI scan...`);
+
+    if (toRecover.length === 0) {
+      setStatus('✅ Nothing to recover — all photos already in your receipt list.');
+      btn.disabled = false;
+      return;
+    }
+
+    let recovered = 0;
+    let failed = 0;
+
+    for (let i = 0; i < toRecover.length; i++) {
+      const file = toRecover[i];
+      setStatus(`Processing ${i + 1} of ${toRecover.length}... (${recovered} recovered so far)`);
+
+      try {
+        // Fetch the image from Drive
+        const imgRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        if (!imgRes.ok) { failed++; continue; }
+        const blob = await imgRes.blob();
+
+        // Convert to base64
+        const base64 = await new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result.split(',')[1]);
+          reader.readAsDataURL(blob);
+        });
+
+        // Ask AI to read it
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 300,
+            messages: [{ role: 'user', content: [
+              { type: 'image', source: { type: 'base64', media_type: blob.type || 'image/jpeg', data: base64 } },
+              { type: 'text', text: 'This is a trucking expense receipt. Extract the vendor name, date (MM/DD/YYYY), total amount, category (Fuel, Truck Maintenance, Meals, Hotel/Lodging, Tolls, Scales/Weigh Stations, Truck Supplies, Tools & Equipment, Permits & Licensing, Phone, Office/Admin, Insurance, Other), gallons (if fuel), and odometer (if shown). Respond ONLY with valid JSON, no explanation: {"vendor":"Love's","date":"06/17/2026","amount":"230.34","category":"Fuel","gallons":"72.3","odometer":"","notes":""}' }
+            ]}]
+          })
+        });
+
+        const aiData = await aiRes.json();
+        const result = JSON.parse(aiData.content[0].text.replace(/```json|```/g, '').trim());
+
+        // Make small thumbnail
+        const thumb = await compressThumb(blob);
+
+        const id = file.id + '_recovered';
+        receipts.push({
+          id,
+          vendor: result.vendor || 'Unknown',
+          date: result.date || '',
+          amount: parseFloat(result.amount) || 0,
+          category: result.category || 'Other',
+          notes: result.notes || '',
+          gallons: result.gallons || '',
+          odometer: result.odometer || '',
+          mpg: '',
+          photoFileId: file.id,
+          photoThumb: thumb,
+          savedAt: file.createdTime || new Date().toISOString()
+        });
+
+        recovered++;
+
+        // Save every 5 receipts so we don't lose progress
+        if (recovered % 5 === 0) {
+          setStatus(`Processing ${i + 1} of ${toRecover.length}... saving progress (${recovered} recovered)...`);
+          receipts.sort((a,b) => {
+            const da = a.date ? parseReceiptDate(a.date, a.savedAt) : new Date(a.savedAt || 0);
+            const db = b.date ? parseReceiptDate(b.date, b.savedAt) : new Date(b.savedAt || 0);
+            return db - da;
+          });
+          await saveIndex();
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 500));
+
+      } catch(e) {
+        console.error('Failed to recover file ' + file.id, e);
+        failed++;
+      }
+    }
+
+    // Final save
+    receipts.sort((a,b) => {
+      const da = a.date ? parseReceiptDate(a.date, a.savedAt) : new Date(a.savedAt || 0);
+      const db = b.date ? parseReceiptDate(b.date, b.savedAt) : new Date(b.savedAt || 0);
+      return db - da;
+    });
+    await saveIndex();
+
+    setStatus(`✅ Done! Recovered ${recovered} receipts. ${failed > 0 ? failed + ' could not be read.' : ''} Check your receipt list now.`);
+    btn.textContent = '✅ Recovery Complete';
+    renderReceipts(); renderPL(); renderHome();
+    showToast('Recovery complete! ' + recovered + ' receipts restored.');
+
+  } catch(e) {
+    console.error('Recovery error:', e);
+    setStatus('❌ Recovery failed: ' + e.message + '. Try again.');
+    btn.disabled = false;
+    btn.textContent = '🚨 Recover My Receipts';
   }
 }
 
