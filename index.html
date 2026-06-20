@@ -884,6 +884,12 @@
       <p style="font-size:13px;color:#666;line-height:1.6">All receipts and photos are saved to a folder called <strong style="color:#f0f0f0">TruckBooks</strong> in your Google Drive. Your data, your account, forever.</p>
     </div>
     <div class="card">
+      <div class="card-title">⚡ Optimize Data</div>
+      <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">Shrinks thumbnails stored in your receipts, ELD logs, settlements, and BOLs. Fixes slow loading and missing data on weak signal. Your photos in Google Drive are NOT affected.</p>
+      <div id="optimizeStatus" style="font-size:13px;color:#2ed573;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-red" id="optimizeBtn" onclick="optimizeData()">⚡ Optimize Now</button>
+    </div>
+    <div class="card">
       <div class="card-title">🗑️ Clear All Receipts</div>
       <p style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.6">This deletes all receipts and photos from Google Drive permanently. Cannot be undone.</p>
       <button class="btn btn-dark" onclick="clearAll()">Clear All Receipts</button>
@@ -1182,14 +1188,20 @@ async function drivePost(path, body) {
 
 // ── LOAD RECEIPTS ──
 async function loadReceipts() {
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
     try {
       const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
       if (res.files && res.files.length) {
-        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, {
+          headers: { Authorization: 'Bearer ' + token },
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const text = await r.text();
-        const parsed = JSON.parse(text); // throws if bad JSON
+        const parsed = JSON.parse(text);
         if (Array.isArray(parsed)) {
           receipts = parsed;
           try {
@@ -1202,13 +1214,15 @@ async function loadReceipts() {
           return; // success
         }
       } else {
-        return; // no file yet, nothing to load
+        return; // no file yet
       }
     } catch(e) {
       console.error('loadReceipts attempt ' + attempt + ' failed:', e);
-      if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+      if (attempt < 5) await new Promise(r => setTimeout(r, 2000 * attempt));
     }
   }
+  // If all retries failed, show a toast so user knows
+  showToast('Could not load receipts — check connection and refresh');
 }
 
 async function saveIndex() {
@@ -3502,6 +3516,93 @@ function confirmNewWeek() {
     saveWeekLoads();
     renderLoads();
     showToast('New week started ✅');
+  }
+}
+
+// ── OPTIMIZE DATA ──
+async function optimizeData() {
+  if (!token) return showToast('Sign in to Google Drive first');
+  const btn = document.getElementById('optimizeBtn');
+  const status = document.getElementById('optimizeStatus');
+  btn.disabled = true;
+  btn.textContent = 'Optimizing...';
+  status.style.display = 'block';
+
+  function setStatus(msg) { status.textContent = msg; }
+
+  async function recompressThumbFromDataUrl(dataUrl) {
+    if (!dataUrl) return null;
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const max = 300;
+        if (w > h && w > max) { h = Math.round(h * max / w); w = max; }
+        else if (h > max) { w = Math.round(w * max / h); h = max; }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        res(c.toDataURL('image/jpeg', 0.5));
+      };
+      img.onerror = () => res(dataUrl); // keep original if it fails
+      img.src = dataUrl;
+    });
+  }
+
+  try {
+    // Optimize receipts
+    setStatus('Optimizing receipts...');
+    let changed = false;
+    for (let i = 0; i < receipts.length; i++) {
+      if (receipts[i].photoThumb && receipts[i].photoThumb.length > 20000) {
+        receipts[i].photoThumb = await recompressThumbFromDataUrl(receipts[i].photoThumb);
+        changed = true;
+      }
+    }
+    if (changed) { setStatus('Saving receipts...'); await saveIndex(); }
+
+    // Optimize ELD logs
+    setStatus('Optimizing ELD logs...');
+    changed = false;
+    for (let i = 0; i < eldLogs.length; i++) {
+      if (eldLogs[i].photoThumb && eldLogs[i].photoThumb.length > 20000) {
+        eldLogs[i].photoThumb = await recompressThumbFromDataUrl(eldLogs[i].photoThumb);
+        changed = true;
+      }
+    }
+    if (changed) { setStatus('Saving ELD logs...'); await saveEldIndex(); }
+
+    // Optimize settlements
+    setStatus('Optimizing settlements...');
+    changed = false;
+    for (let i = 0; i < settlements.length; i++) {
+      if (settlements[i].photoThumb && settlements[i].photoThumb.length > 20000) {
+        settlements[i].photoThumb = await recompressThumbFromDataUrl(settlements[i].photoThumb);
+        changed = true;
+      }
+    }
+    if (changed) { setStatus('Saving settlements...'); await saveSettlementsIndex(); }
+
+    // Optimize BOLs
+    setStatus('Optimizing BOLs...');
+    changed = false;
+    for (let i = 0; i < bols.length; i++) {
+      if (bols[i].photoThumb && bols[i].photoThumb.length > 20000) {
+        bols[i].photoThumb = await recompressThumbFromDataUrl(bols[i].photoThumb);
+        changed = true;
+      }
+    }
+    if (changed) { setStatus('Saving BOLs...'); await saveBolsIndex(); }
+
+    setStatus('✅ Done! All data optimized. Loading will be much faster now.');
+    btn.textContent = '✅ Already Optimized';
+    showToast('Data optimized! ✅');
+    renderReceipts(); renderEld(); renderSettlements(); renderBols();
+  } catch(e) {
+    console.error('Optimize error:', e);
+    setStatus('❌ Something went wrong. Try again.');
+    btn.disabled = false;
+    btn.textContent = '⚡ Optimize Now';
   }
 }
 
