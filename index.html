@@ -889,6 +889,12 @@
       <div id="recoveryStatus" style="font-size:13px;color:#2ed573;margin-bottom:8px;display:none;line-height:1.6"></div>
       <button class="btn btn-red" id="recoveryBtn" onclick="recoverReceipts()">🚨 Recover My Receipts</button>
     </div>
+    <div class="card" style="border-color:#e94560">
+      <div class="card-title">🚨 Recover ELD Logs</div>
+      <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">Reprocesses all ELD log photos from Google Drive with better quality thumbnails.</p>
+      <div id="eldRecoveryStatus" style="font-size:13px;color:#2ed573;margin-bottom:8px;display:none;line-height:1.6"></div>
+      <button class="btn btn-red" id="eldRecoveryBtn" onclick="recoverEldLogs()">🚨 Recover ELD Logs</button>
+    </div>
     <div class="card">
       <div class="card-title">⚡ Optimize Data</div>
       <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">Shrinks thumbnails stored in your receipts, ELD logs, settlements, and BOLs. Fixes slow loading and missing data on weak signal. Your photos in Google Drive are NOT affected.</p>
@@ -3679,6 +3685,78 @@ async function recoverReceipts() {
     setStatus('❌ Recovery failed: ' + e.message + '. Try again.');
     btn.disabled = false;
     btn.textContent = '🚨 Recover My Receipts';
+  }
+}
+
+// ── RECOVER ELD LOGS ──
+async function recoverEldLogs() {
+  if (!token) return showToast('Sign in to Google Drive first');
+  const btn = document.getElementById('eldRecoveryBtn');
+  const status = document.getElementById('eldRecoveryStatus');
+  btn.disabled = true;
+  status.style.display = 'block';
+
+  function setStatus(msg) { status.textContent = msg; }
+
+  try {
+    setStatus('Scanning Google Drive for ELD photos...');
+    let allFiles = [];
+    let pageToken = null;
+    do {
+      let url = `files?q='${folderId}' in parents and name contains 'eld_' and trashed=false&fields=files(id,name,createdTime)&pageSize=100`;
+      if (pageToken) url += '&pageToken=' + pageToken;
+      const res = await driveGet(url);
+      if (res.files) allFiles = allFiles.concat(res.files.filter(f => f.name.endsWith('.jpg')));
+      pageToken = res.nextPageToken;
+    } while (pageToken);
+
+    setStatus(`Found ${allFiles.length} ELD photos. Reprocessing...`);
+
+    let recovered = 0;
+    let failed = 0;
+
+    for (let i = 0; i < allFiles.length; i++) {
+      const file = allFiles[i];
+      setStatus(`Processing ${i + 1} of ${allFiles.length}... (${recovered} done)`);
+
+      try {
+        const imgRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        if (!imgRes.ok) { failed++; continue; }
+        const blob = await imgRes.blob();
+        const thumb = await compressThumb(blob);
+
+        // Find existing log entry and update thumbnail, or skip if not found
+        const existing = eldLogs.find(l => l.photoFileId === file.id);
+        if (existing) {
+          existing.photoThumb = thumb;
+          recovered++;
+        }
+
+        if (recovered % 5 === 0 && recovered > 0) {
+          setStatus(`Processing ${i + 1} of ${allFiles.length}... saving progress...`);
+          await saveEldIndex();
+        }
+
+        await new Promise(r => setTimeout(r, 300));
+      } catch(e) {
+        console.error('ELD recovery failed for ' + file.id, e);
+        failed++;
+      }
+    }
+
+    await saveEldIndex();
+    setStatus(`✅ Done! Updated ${recovered} ELD thumbnails. ${failed > 0 ? failed + ' failed.' : ''}`);
+    btn.textContent = '✅ Recovery Complete';
+    renderEld();
+    showToast('ELD logs recovered! ✅');
+
+  } catch(e) {
+    console.error('ELD recovery error:', e);
+    setStatus('❌ Failed: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🚨 Recover ELD Logs';
   }
 }
 
