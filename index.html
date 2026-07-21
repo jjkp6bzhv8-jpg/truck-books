@@ -313,6 +313,21 @@
           <div id="loadWeekFuel" style="color:#e94560;font-size:20px;font-weight:700">$0.00</div>
         </div>
       </div>
+      <div class="eld-counter-box" style="margin-bottom:8px">
+        <div class="eld-split-counter">
+          <div class="eld-split-side">
+            <div class="eld-split-label">Avg Rate / Mile</div>
+            <div class="eld-split-num" id="loadWeekRpm">$0.00</div>
+            <div class="eld-split-sub">this week</div>
+          </div>
+          <div class="eld-split-divider"></div>
+          <div class="eld-split-side">
+            <div class="eld-split-label">Total Miles</div>
+            <div class="eld-split-num eld-split-num-white" id="loadWeekMiles">0</div>
+            <div class="eld-split-sub">this week</div>
+          </div>
+        </div>
+      </div>
       <div style="background:#1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px">
         <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Other Expenses This Week</div>
         <div id="loadWeekOther" style="color:#e94560;font-size:20px;font-weight:700;text-align:center">$0.00</div>
@@ -3512,11 +3527,17 @@ function renderLoads() {
   const weekFixed = fixedCosts.reduce((s,fc) => s + fc.amount, 0);
 
   const weekGross = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0), 0);
+  const weekMiles = weekLoads.reduce((s,l) => s + (parseFloat(l.miles)||0), 0);
+  const weekRpm = weekMiles > 0 ? (weekGross / weekMiles) : 0;
   const weekNet = weekGross - weekFuel - weekOther - weekFixed;
 
   summary.style.display = 'block';
   document.getElementById('loadWeekGross').textContent = '$' + fmt(weekGross);
   document.getElementById('loadWeekFuel').textContent = '$' + fmt(weekFuel);
+  document.getElementById('loadWeekMiles').textContent = weekMiles.toLocaleString();
+  const rpmEl = document.getElementById('loadWeekRpm');
+  rpmEl.textContent = '$' + weekRpm.toFixed(2);
+  rpmEl.style.color = weekRpm === 0 ? '#f0f0f0' : (weekRpm >= 2.00 ? '#2ed573' : '#e94560');
 
   // Other expenses
   document.getElementById('loadWeekOther').textContent = '$' + fmt(weekOther);
