@@ -2817,61 +2817,72 @@ function generateExport() {
   const from = document.getElementById('exportFrom').value;
   const to = document.getElementById('exportTo').value;
   const dateLabel = (from || to) ? ((from || '—') + ' to ' + (to || '—')) : 'All Time';
+
+  const rList = (type === 'settlements' || type === 'eld') ? [] : receipts.filter(r => exportDateFilter(r.date, r.savedAt, from, to));
+  const sList = (type === 'receipts' || type === 'eld') ? [] : settlements.filter(s => exportDateFilter(s.date, s.savedAt, from, to));
+  const eList = (type === 'eld' || type === 'all') ? eldLogs.filter(e => exportDateFilter(e.date, e.savedAt, from, to)) : [];
+
+  const totalIncome = sList.reduce((s,sv) => s + (parseFloat(sv.gross)||0), 0);
+  const receiptExpenses = rList.filter(r => r.category !== 'Fuel').reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
+  const settlementDeductionTotal = sList.reduce((s, sv) => {
+    let t = sv.totalDeductions ? parseFloat(sv.totalDeductions) : (sv.deductions||[]).filter(d=>!d.skip && parseFloat(d.amount||0) > 0).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+    if (sList.length > 1) {
+      const balFwd = (sv.deductions||[]).filter(d => /balance\s*forward|balfwd/i.test(d.label||'')).reduce((a,d)=>a+parseFloat(d.amount||0),0);
+      t -= balFwd;
+    }
+    return s + t;
+  }, 0);
+  const totalExpenses = receiptExpenses + settlementDeductionTotal;
+  const netProfit = totalIncome - totalExpenses;
+
+  const cats = {};
+  rList.forEach(r => { cats[r.category] = (cats[r.category]||0) + (parseFloat(r.amount)||0); });
+  sList.forEach(sv => (sv.deductions||[]).filter(d=>!d.skip).forEach(d => {
+    const c = d.category || 'Other';
+    cats[c] = (cats[c]||0) + (parseFloat(d.amount)||0);
+  }));
+  const sortedCats = Object.entries(cats).filter(([c]) => cat === 'all' || c === cat).sort((a,b)=>b[1]-a[1]);
+
   let html = `<html><head><meta charset="UTF-8"><title>TruckBooks Audit Report</title>
-  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:20px;max-width:900px;margin:0 auto}h1{font-size:20px;margin-bottom:4px}.sub{font-size:12px;color:#555;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:24px}th{background:#222;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}tr:nth-child(even){background:#f9f9f9}.section-title{font-size:15px;font-weight:bold;margin:20px 0 8px;border-bottom:2px solid #222;padding-bottom:4px}.total{font-weight:bold;font-size:13px;text-align:right;margin-top:4px}.footer{font-size:11px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}@media print{body{padding:0}}</style></head><body>
+  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:20px;max-width:900px;margin:0 auto}h1{font-size:20px;margin-bottom:4px}.sub{font-size:12px;color:#555;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:24px}th{background:#222;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}tr:nth-child(even){background:#f9f9f9}.section-title{font-size:15px;font-weight:bold;margin:20px 0 8px;border-bottom:2px solid #222;padding-bottom:4px}.total{font-weight:bold;font-size:13px;text-align:right;margin-top:4px}.summary-box{background:#f4f4f4;border:1px solid #ccc;border-radius:6px;padding:16px;margin-bottom:24px}.summary-row{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}.summary-row.net{border-top:2px solid #222;margin-top:6px;padding-top:10px;font-weight:bold;font-size:16px}.footer{font-size:11px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}@media print{body{padding:0}}</style></head><body>
   <h1>🚛 TruckBooks — Audit Report</h1>
-  <div class="sub">Date Range: ${dateLabel} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</div>`;
-  if (type === 'receipts' || type === 'all') {
-    let list = receipts.filter(r => exportDateFilter(r.date, r.savedAt, from, to));
-    if (cat !== 'all') list = list.filter(r => r.category === cat);
-    html += `<div class="section-title">🧾 Receipts — ${cat === 'all' ? 'All Categories' : cat}</div>`;
-    if (!list.length) { html += '<p style="color:#888">No receipts found.</p>'; }
-    else {
-      let total = 0;
-      html += '<table><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Notes</th></tr>';
-      list.forEach(r => { total += parseFloat(r.amount)||0; html += `<tr><td>${r.date||'—'}</td><td>${r.vendor||'—'}</td><td>${r.category||'—'}</td><td>$${fmt((parseFloat(r.amount)||0))}</td><td>${r.notes||''}</td></tr>`; });
-      html += `</table><div class="total">Total: $${fmt(total)}</div>`;
-    }
+  <div class="sub">Date Range: ${dateLabel} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+  <div class="summary-box">
+    <div class="summary-row"><span>Gross Income</span><span>$${fmt(totalIncome)}</span></div>
+    <div class="summary-row"><span>Total Expenses</span><span>$${fmt(totalExpenses)}</span></div>
+    <div class="summary-row net"><span>${netProfit>=0?'Net Profit':'Net Loss'}</span><span>$${fmt(Math.abs(netProfit))}</span></div>
+  </div>`;
+
+  if (sortedCats.length) {
+    html += `<div class="section-title">Expenses by Category</div>
+    <table><tr><th>Category</th><th style="text-align:right">Amount</th><th style="text-align:right">% of Expenses</th></tr>`;
+    sortedCats.forEach(([c, amt]) => {
+      const pct = totalExpenses > 0 ? Math.round(amt/totalExpenses*100) : 0;
+      html += `<tr><td>${c}</td><td style="text-align:right">$${fmt(amt)}</td><td style="text-align:right">${pct}%</td></tr>`;
+    });
+    html += `</table>`;
   }
-  if (type === 'settlements' || type === 'all') {
-    const list = settlements.filter(s => exportDateFilter(s.date, s.savedAt, from, to));
-    html += `<div class="section-title">📄 Settlements</div>`;
-    if (!list.length) { html += '<p style="color:#888">No settlements found.</p>'; }
-    else {
-      let total = 0;
-      list.forEach(s => {
-        const gross = parseFloat(s.gross)||0;
-        const ded = (s.deductions||[]).reduce((a,d)=>a+(parseFloat(d.amount)||0),0);
-        const net = gross - ded;
-        total += gross;
-        html += `<table style="margin-bottom:6px"><tr><th>Settlement Date</th><th>Gross Pay</th><th>Net Pay</th></tr>
-          <tr><td>${s.date||'—'}</td><td>$${fmt(gross)}</td><td>$${fmt(net)}</td></tr></table>`;
-        if ((s.deductions||[]).length) {
-          html += '<table style="margin-bottom:18px"><tr><th>Deduction</th><th style="text-align:right">Amount</th></tr>';
-          (s.deductions||[]).forEach(d => {
-            const amt = parseFloat(d.amount)||0;
-            html += `<tr><td>${d.label||'—'}</td><td style="text-align:right">${amt<0?'$':'-$'}${fmt(Math.abs(amt))}</td></tr>`;
-          });
-          html += '</table>';
-        } else {
-          html += '<div style="margin-bottom:18px"></div>';
-        }
-      });
-      html += `<div class="total">Total Gross: $${fmt(total)}</div>`;
-    }
+
+  if (sList.length) {
+    html += `<div class="section-title">📄 Settlement Periods</div>
+    <table><tr><th>Date</th><th style="text-align:right">Gross</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th></tr>`;
+    sList.forEach(s => {
+      const gross = parseFloat(s.gross)||0;
+      const ded = s.totalDeductions ? parseFloat(s.totalDeductions) : (s.deductions||[]).reduce((a,d)=>a+(parseFloat(d.amount)||0),0);
+      html += `<tr><td>${s.date||'—'}</td><td style="text-align:right">$${fmt(gross)}</td><td style="text-align:right">$${fmt(ded)}</td><td style="text-align:right">$${fmt(gross-ded)}</td></tr>`;
+    });
+    html += `</table>`;
   }
-  if (type === 'eld' || type === 'all') {
-    const list = eldLogs.filter(e => exportDateFilter(e.date, e.savedAt, from, to));
-    html += `<div class="section-title">📋 ELD Logs</div>`;
-    if (!list.length) { html += '<p style="color:#888">No ELD logs found.</p>'; }
-    else {
-      let totalMiles=0; let awayDays=0;
-      html += '<table><tr><th>Date</th><th>Miles</th><th>Away From Home</th></tr>';
-      list.forEach(e => { totalMiles+=parseFloat(e.miles)||0; if(e.awayFromHome)awayDays++; html+=`<tr><td>${e.date||'—'}</td><td>${e.miles||'—'}</td><td>${e.awayFromHome?'Yes':'No'}</td></tr>`; });
-      html += `</table><div class="total">Total Miles: ${totalMiles.toLocaleString()} | Away Days: ${awayDays}</div>`;
-    }
+
+  if (eList.length) {
+    let totalMiles=0; let awayDays=0;
+    eList.forEach(e => { totalMiles+=parseFloat(e.miles)||0; if(e.awayFromHome)awayDays++; });
+    html += `<div class="section-title">📋 ELD Summary</div>
+    <div class="summary-row"><span>Total Miles</span><span>${totalMiles.toLocaleString()}</span></div>
+    <div class="summary-row"><span>Days Away From Home</span><span>${awayDays}</span></div>`;
   }
-  html += `<div class="footer">Generated by TruckBooks</div></body></html>`;
+
+  html += `<div class="footer">Generated by TruckBooks — Summary report. Full receipts and settlement statements are retained on file and available on request.</div></body></html>`;
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
