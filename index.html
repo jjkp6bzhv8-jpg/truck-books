@@ -2031,7 +2031,7 @@ async function processAllSettlementPages() {
     ? 'MODE: CATCH-UP YTD. You MUST use the YTD row numbers only. Find the Paycheck Summary table. Use the YTD row: gross = YTD Gross Earnings, totalDeductions = YTD Other Deductions. Do NOT use Current row numbers.'
     : 'MODE: WEEKLY. You MUST use the Current row numbers only. Find the Paycheck Summary table. Use the Current row: gross = Current Gross Earnings, totalDeductions = Current Other Deductions. Do NOT use YTD row numbers.';
 
-  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet (${settlementPages.length} page(s)). ${modeInstruction} Also list each individual deduction line item for category breakdown. Respond ONLY with valid JSON: {"date":"MM/DD/YYYY","gross":"27179.26","totalDeductions":"12270.76","deductions":[{"label":"Bobtail Insurance","amount":"121.80","category":"Insurance","skip":false},{"label":"IC - Required Escrow","amount":"-1687.68","category":"Other","skip":true}]}. CRITICAL RULES: 1) date = check date or pay end date. 2) gross and totalDeductions MUST come from the Paycheck Summary table YTD or Current row as instructed above. 3) For each deduction line: if amount is negative set skip:true. For weekly mode also set skip:true for fuel items. 4) Categories: Insurance, Fuel, Truck Payment, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Other.` });
+  content_parts.push({ type: 'text', text: `This is a truck driver settlement sheet (${settlementPages.length} page(s)). ${modeInstruction} Also list each individual deduction line item for category breakdown. Respond ONLY with valid JSON: {"date":"MM/DD/YYYY","gross":"27179.26","totalDeductions":"12270.76","deductions":[{"label":"Bobtail Insurance","amount":"121.80","category":"Insurance","skip":false},{"label":"IC - Required Escrow","amount":"-1687.68","category":"Escrow/Advance","skip":true}]}. CRITICAL RULES: 1) date = check date or pay end date. 2) gross and totalDeductions MUST come from the Paycheck Summary table YTD or Current row as instructed above. 3) For each deduction line: if amount is negative set skip:true. For weekly mode also set skip:true for fuel items. 4) Categories — pick the MOST SPECIFIC one that fits, only use "Other" if truly nothing else fits: Insurance, Cargo/Occupational Insurance, Fuel, Truck Payment, Trailer Payment/Rental, Truck Maintenance, Permits & Licensing, Phone, Scales/Weigh Stations, Office/Admin, Tolls, Dispatch/Load Board Fee, ELD/Tablet Fee, Escrow/Advance, Taxes/IFTA, Other.` });
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2471,13 +2471,25 @@ function renderPL() {
   let catRows = '';
   if (sorted.length) {
     let rows = '';
-    sorted.forEach(function(entry) {
+    sorted.forEach(function(entry, idx) {
       const cat = entry[0], amt = entry[1];
       const pct = totalExpenses > 0 ? Math.round(amt/totalExpenses*100) : 0;
-      const n = rList.filter(r=>r.category===cat).length;
-      const fromSettlements = sList.reduce((s,sv)=>s+(sv.deductions||[]).filter(d=>!d.skip&&(d.category||'Other')===cat).length,0);
+      const receiptItems = rList.filter(r=>r.category===cat)
+        .map(r => ({ label: r.vendor, date: r.date, amount: r.amount }));
+      const deductionItems = [];
+      sList.forEach(sv => {
+        (sv.deductions||[]).filter(d=>!d.skip && (d.category||'Other')===cat).forEach(d => {
+          deductionItems.push({ label: d.label, date: sv.date, amount: parseFloat(d.amount||0) });
+        });
+      });
+      const items = receiptItems.concat(deductionItems);
+      const n = receiptItems.length;
+      const fromSettlements = deductionItems.length;
       const sourceNote = (n > 0 && fromSettlements > 0) ? (n+' receipt'+(n!==1?'s':'')+' + '+fromSettlements+' deduction'+(fromSettlements!==1?'s':'')) : fromSettlements > 0 ? fromSettlements+' settlement deduction'+(fromSettlements!==1?'s':'') : n+' receipt'+(n!==1?'s':'');
-      rows += '<div class="cat-row"><div style="flex:1"><div class="cat-name">' + cat + '</div><div class="cat-count">' + sourceNote + ' · ' + pct + '%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%"></div></div></div><div class="cat-amount">$' + fmt(amt) + '</div></div>';
+      const detailId = 'catDetail' + idx;
+      const itemRows = items.map(it => '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222;font-size:13px"><span style="color:#ccc">' + (it.label||'—') + ' <span style="color:#555">(' + (it.date||'') + ')</span></span><span style="color:#e94560">$' + fmt(it.amount) + '</span></div>').join('');
+      rows += '<div class="cat-row" style="cursor:pointer" onclick="document.getElementById(\'' + detailId + '\').style.display = document.getElementById(\'' + detailId + '\').style.display===\'block\'?\'none\':\'block\'"><div style="flex:1"><div class="cat-name">' + cat + ' <span style="color:#555;font-size:11px">▾ tap for detail</span></div><div class="cat-count">' + sourceNote + ' · ' + pct + '%</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%"></div></div></div><div class="cat-amount">$' + fmt(amt) + '</div></div>'
+        + '<div id="' + detailId + '" style="display:none;padding:4px 12px 12px;margin-top:-8px">' + (itemRows || '<div style="color:#555;font-size:13px">No itemized detail available.</div>') + '</div>';
     });
     catRows = '<div class="card"><div class="card-title">Expenses by Category</div>' + rows + '</div>';
   }
