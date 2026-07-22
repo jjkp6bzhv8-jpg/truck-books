@@ -517,6 +517,16 @@
             <h4>✅ AI Read This Receipt</h4>
             <div id="aiResultRows"></div>
           </div>
+          <div id="receiptErrorBox" style="display:none;background:#2a1414;border:1px solid #e94560;border-radius:10px;padding:14px;margin-bottom:12px">
+            <div style="color:#e94560;font-weight:700;font-size:14px;margin-bottom:6px">⚠️ Couldn't read this receipt</div>
+            <div id="receiptErrorMsg" style="color:#ccc;font-size:13px;margin-bottom:10px"></div>
+            <button class="btn btn-red" onclick="scanWithAI(currentPhotoBlob)" style="margin-bottom:0">🔄 Retry</button>
+          </div>
+          <div id="receiptSaveErrorBox" style="display:none;background:#2a1414;border:1px solid #e94560;border-radius:10px;padding:14px;margin-bottom:12px">
+            <div style="color:#e94560;font-weight:700;font-size:14px;margin-bottom:6px">⚠️ Couldn't save this receipt</div>
+            <div id="receiptSaveErrorMsg" style="color:#ccc;font-size:13px;margin-bottom:10px"></div>
+            <button class="btn btn-red" onclick="doSaveReceipt()" style="margin-bottom:0">🔄 Retry Save</button>
+          </div>
           <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save to Google Drive</button>
           <button class="btn btn-dark" id="cancelScanBtn" onclick="cancelScan()" style="display:none;margin-top:8px">✕ Cancel</button>
         </div>
@@ -1385,6 +1395,8 @@ function handlePhoto(input) {
     const img = document.getElementById('receiptPreview');
     img.src = currentPhoto; img.style.display = 'block';
     document.getElementById('aiResult').style.display = 'none';
+    document.getElementById('receiptErrorBox').style.display = 'none';
+    document.getElementById('receiptSaveErrorBox').style.display = 'none';
     document.getElementById('saveBtn').style.display = 'none';
     document.getElementById('cancelScanBtn').style.display = 'block';
     scanWithAI(file);
@@ -1398,18 +1410,26 @@ async function scanWithAI(file) {
   const key = localStorage.getItem('tb_key');
   if (!key) { showToast('Add your API key in Settings'); return; }
   document.getElementById('spinner').style.display = 'block';
+  document.getElementById('receiptErrorBox').style.display = 'none';
   const b64 = await compress(file, 1000, 0.8);
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: [
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64.split(',')[1] }},
         { type: 'text', text: 'Read this receipt. Respond ONLY with JSON: {"vendor":"name","date":"MM/DD/YYYY","amount":"45.23","category":"Fuel or Truck Maintenance or Truck Payment or Insurance or Permits & Licensing or Tolls or Meals or Hotel/Lodging or Office/Admin or Phone or Scales/Weigh Stations or Truck Supplies or Tools & Equipment or Other","gallons":"","odometer":""}. For gallons and odometer: only fill in if this is a Fuel receipt AND the value is clearly printed on the receipt. Otherwise leave as empty string.' }
       ]}]})
     });
     const d = await r.json();
-    currentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    if (d.error) throw new Error(d.error.message || 'API error');
+    if (!d.content || !d.content[0] || !d.content[0].text) throw new Error('Empty response from AI');
+    let rawText = d.content[0].text.replace(/```json|```/g,'').trim();
+    try {
+      currentResult = JSON.parse(rawText);
+    } catch(parseErr) {
+      throw new Error('AI response was cut off or not valid JSON. Try scanning again.');
+    }
     currentResult.notes = '';
     currentResult.gallons = currentResult.gallons || '';
     currentResult.odometer = currentResult.odometer || '';
@@ -1451,7 +1471,11 @@ async function scanWithAI(file) {
       </div>`;
     document.getElementById('aiResult').style.display = 'block';
     document.getElementById('saveBtn').style.display = 'block';
-  } catch(e) { showToast('Error reading receipt. Try again.'); console.error(e); }
+  } catch(e) {
+    document.getElementById('receiptErrorMsg').textContent = e.message || 'Unknown error. Try again.';
+    document.getElementById('receiptErrorBox').style.display = 'block';
+    console.error(e);
+  }
   document.getElementById('spinner').style.display = 'none';
 }
 
@@ -2213,6 +2237,7 @@ function confirmSaveAnyway() { closeDuplicateModal(); doSaveReceipt(); }
 async function doSaveReceipt() {
   if (!currentResult || !currentPhoto) return;
   if (!token) { showToast('Sign in to Google Drive first'); return; }
+  document.getElementById('receiptSaveErrorBox').style.display = 'none';
   const btn = document.getElementById('saveBtn');
   btn.textContent = 'Saving...'; btn.disabled = true;
   showLoading('Uploading photo to Google Drive...');
@@ -2249,7 +2274,10 @@ async function doSaveReceipt() {
     document.body.scrollTop = 0;
   } catch(e) {
     btn.textContent = '💾 Save to Google Drive'; btn.disabled = false;
-    hideLoading(); showToast('Save failed. Try again.'); console.error(e);
+    hideLoading();
+    document.getElementById('receiptSaveErrorMsg').textContent = (e.message || 'Unknown error') + ' — your receipt has NOT been saved yet.';
+    document.getElementById('receiptSaveErrorBox').style.display = 'block';
+    console.error(e);
   }
 }
 
@@ -2738,6 +2766,8 @@ function cancelScan() {
   document.getElementById('receiptPreview').style.display = 'none';
   document.getElementById('receiptPreview').src = '';
   document.getElementById('aiResult').style.display = 'none';
+  document.getElementById('receiptErrorBox').style.display = 'none';
+  document.getElementById('receiptSaveErrorBox').style.display = 'none';
   document.getElementById('saveBtn').style.display = 'none';
   document.getElementById('cancelScanBtn').style.display = 'none';
   document.getElementById('spinner').style.display = 'none';
