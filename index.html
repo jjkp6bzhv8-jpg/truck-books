@@ -672,6 +672,11 @@
           <h4>✅ AI Read This Settlement</h4>
           <div id="settlementAiRows"></div>
         </div>
+        <div id="settlementErrorBox" style="display:none;background:#2a1414;border:1px solid #e94560;border-radius:10px;padding:14px;margin-bottom:12px">
+          <div style="color:#e94560;font-weight:700;font-size:14px;margin-bottom:6px">⚠️ Couldn't read this settlement</div>
+          <div id="settlementErrorMsg" style="color:#ccc;font-size:13px;margin-bottom:10px"></div>
+          <button class="btn btn-red" onclick="processAllSettlementPages()" style="margin-bottom:0">🔄 Retry</button>
+        </div>
         <button class="btn btn-red" id="settlementSaveBtn" onclick="saveSettlement()" style="display:none">💾 Save to Google Drive</button>
         <button class="btn btn-dark" id="settlementCancelBtn" onclick="cancelSettlementScan()" style="display:none;margin-top:8px">✕ Cancel</button>
       </div>
@@ -1985,6 +1990,7 @@ async function processAllSettlementPages() {
   if (!key) { showToast('Add your API key in Settings'); return; }
   document.getElementById('settlementSpinner').style.display = 'block';
   document.getElementById('settlementAiResult').style.display = 'none';
+  document.getElementById('settlementErrorBox').style.display = 'none';
   document.getElementById('settlementSaveBtn').style.display = 'none';
 
   // Build content array with all pages
@@ -2004,10 +2010,17 @@ async function processAllSettlementPages() {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, messages: [{ role: 'user', content: content_parts }]})
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4000, messages: [{ role: 'user', content: content_parts }]})
     });
     const d = await r.json();
-    settlementCurrentResult = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    if (d.error) throw new Error(d.error.message || 'API error');
+    if (!d.content || !d.content[0] || !d.content[0].text) throw new Error('Empty response from AI');
+    let rawText = d.content[0].text.replace(/```json|```/g,'').trim();
+    try {
+      settlementCurrentResult = JSON.parse(rawText);
+    } catch(parseErr) {
+      throw new Error('AI response was cut off or not valid JSON. This usually happens with settlements that have a lot of deduction lines.');
+    }
     const skipped = (settlementCurrentResult.deductions||[]).filter(d => d.skip);
     const counted = (settlementCurrentResult.deductions||[]).filter(d => !d.skip);
     const totalDeductions = parseFloat(settlementCurrentResult.totalDeductions || 0);
@@ -2022,7 +2035,11 @@ async function processAllSettlementPages() {
       <div class="result-row" style="border-top:1px solid #333;margin-top:4px;padding-top:8px"><span class="result-label" style="color:#f0f0f0;font-weight:700">Net After Deductions</span><span class="result-value" style="color:#2ed573;font-size:16px">$${fmt(net)}</span></div>`;
     document.getElementById('settlementAiResult').style.display = 'block';
     document.getElementById('settlementSaveBtn').style.display = 'block';
-  } catch(e) { showToast('Error reading settlement. Try again.'); console.error(e); }
+  } catch(e) {
+    document.getElementById('settlementErrorMsg').textContent = e.message || 'Unknown error. Try again.';
+    document.getElementById('settlementErrorBox').style.display = 'block';
+    console.error(e);
+  }
   document.getElementById('settlementSpinner').style.display = 'none';
 }
 
@@ -2035,6 +2052,7 @@ function cancelSettlementScan() {
   document.getElementById('settlementPageThumbs').style.display = 'none';
   document.getElementById('settlementPageThumbs').innerHTML = '';
   document.getElementById('settlementAiResult').style.display = 'none';
+  document.getElementById('settlementErrorBox').style.display = 'none';
   document.getElementById('settlementSaveBtn').style.display = 'none';
   document.getElementById('settlementCancelBtn').style.display = 'none';
   document.getElementById('settlementAddPageBtn').style.display = 'none';
