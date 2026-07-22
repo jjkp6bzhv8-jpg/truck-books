@@ -520,6 +520,9 @@
           <button class="btn btn-red" id="saveBtn" onclick="saveReceipt()" style="display:none">💾 Save to Google Drive</button>
           <button class="btn btn-dark" id="cancelScanBtn" onclick="cancelScan()" style="display:none;margin-top:8px">✕ Cancel</button>
         </div>
+        <div style="margin-bottom:12px">
+          <input type="text" id="receiptSearchInput" placeholder="🔍 Search receipts (vendor, category, notes)..." oninput="renderReceipts()" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px">
+        </div>
         <div id="receiptsList"></div>
       </div>
 
@@ -2254,8 +2257,20 @@ async function doSaveReceipt() {
 function renderReceipts() {
   const el = document.getElementById('receiptsList');
   if (!token) return;
-  const list = receipts;
-  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><p>No receipts yet.<br>Scan your first receipt!</p></div>'; return; }
+  const searchEl = document.getElementById('receiptSearchInput');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const list = q ? receipts.filter(r =>
+    (r.vendor||'').toLowerCase().includes(q) ||
+    (r.category||'').toLowerCase().includes(q) ||
+    (r.notes||'').toLowerCase().includes(q) ||
+    (r.date||'').toLowerCase().includes(q)
+  ) : receipts;
+  if (!list.length) {
+    el.innerHTML = q
+      ? `<div class="empty"><div class="empty-icon">🔍</div><p>No receipts match "${searchEl.value.trim()}".</p></div>`
+      : '<div class="empty"><div class="empty-icon">🧾</div><p>No receipts yet.<br>Scan your first receipt!</p></div>';
+    return;
+  }
   el.innerHTML = list.map(r => `
     <div class="receipt-item">
       <div class="receipt-item-header" onclick="toggle('d${r.id}')">
