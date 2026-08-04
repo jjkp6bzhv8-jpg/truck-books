@@ -182,7 +182,7 @@
   .eld-log-detail { display: none; padding: 0 14px 14px; border-top: 1px solid #222; }
   .eld-log-detail.open { display: block; }
   .pill-toggle { display: flex; gap: 8px; }
-  .pill-btn { flex: 1; padding: 9px 8px; border-radius: 20px; border: 1px solid #333; background: #111; color: #555; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .pill-btn { flex: 1; padding: 9px 8px; border-radius: 20px; border: 1px solid #333; background: #111; color: #555; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; -webkit-appearance: none; appearance: none; outline: none; }
   .pill-btn.selected-away { border-color: #e94560; background: rgba(233,69,96,0.15); color: #e94560; }
   .pill-btn.selected-home { border-color: #555; background: rgba(85,85,85,0.15); color: #aaa; }
   .eld-ai-result { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px; margin-bottom: 12px; display: none; }
@@ -772,8 +772,8 @@
         <div id="eldAwayField" style="display:none;margin-bottom:12px">
           <label style="margin-bottom:8px">Per Diem Qualifying Day?</label>
           <div class="pill-toggle">
-            <div class="pill-btn" id="btnAway" onclick="setAway(true)">✅ Away — Qualifies</div>
-            <div class="pill-btn" id="btnHome" onclick="setAway(false)">🏠 Home / Off</div>
+            <button type="button" class="pill-btn" id="btnAway" onclick="setAway(true)" style="-webkit-tap-highlight-color:transparent;touch-action:manipulation;">✅ Away — Qualifies</button>
+            <button type="button" class="pill-btn" id="btnHome" onclick="setAway(false)" style="-webkit-tap-highlight-color:transparent;touch-action:manipulation;">🏠 Home / Off</button>
           </div>
         </div>
 
