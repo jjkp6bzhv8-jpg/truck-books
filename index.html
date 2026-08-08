@@ -332,6 +332,11 @@
         <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Other Expenses This Week</div>
         <div id="loadWeekOther" style="color:#e94560;font-size:20px;font-weight:700;text-align:center">$0.00</div>
         <div id="loadWeekOtherList" style="margin-top:8px;display:none"></div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <input type="text" id="loadOtherName" placeholder="e.g. Scale ticket" style="flex:2;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#f0f0f0;font-size:13px">
+          <input type="number" id="loadOtherAmt" placeholder="$" step="0.01" style="flex:1;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#f0f0f0;font-size:13px">
+          <button onclick="addWeekManualExpense()" style="background:#222;border:1px solid #333;border-radius:8px;color:#e94560;font-size:13px;padding:8px 12px;cursor:pointer">➕</button>
+        </div>
       </div>
       <!-- Fixed Weekly Costs -->
       <div style="background:#1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px">
@@ -3466,6 +3471,23 @@ async function confirmMixedDelete() {
 
 // ── WEEKLY LOAD TRACKER ──
 let weekLoads = JSON.parse(localStorage.getItem('tb_weekLoads') || '[]');
+let weekManualExpenses = JSON.parse(localStorage.getItem('tb_weekManualExpenses') || '[]');
+function saveWeekManualExpenses() { localStorage.setItem('tb_weekManualExpenses', JSON.stringify(weekManualExpenses)); }
+function addWeekManualExpense() {
+  const name = document.getElementById('loadOtherName').value.trim();
+  const amount = parseFloat(document.getElementById('loadOtherAmt').value) || 0;
+  if (!name || !amount) return showToast('Enter name and amount');
+  weekManualExpenses.unshift({ id: 'me' + Date.now(), name, amount });
+  saveWeekManualExpenses();
+  document.getElementById('loadOtherName').value = '';
+  document.getElementById('loadOtherAmt').value = '';
+  renderLoads();
+}
+function deleteWeekManualExpense(id) {
+  weekManualExpenses = weekManualExpenses.filter(e => e.id !== id);
+  saveWeekManualExpenses();
+  renderLoads();
+}
 
 const DEFAULT_FIXED_COSTS = [
   { id: 'fc1', name: 'Communications Equipment', amount: 17.00 },
@@ -3602,12 +3624,9 @@ function renderLoads() {
   });
   const weekFuel = weekFuelReceipts.reduce((s,r) => s + r.amount, 0);
 
-  // All other receipts this week (non-fuel)
-  const weekOtherReceipts = receipts.filter(r => {
-    const d = parseReceiptDate(r.date, r.savedAt);
-    return r.category !== 'Fuel' && d >= weekStart;
-  });
-  const weekOther = weekOtherReceipts.reduce((s,r) => s + r.amount, 0);
+  // Other expenses this week — manual entry only, NOT auto-pulled from receipts
+  // (receipts include stuff paid on personal card, e.g. tires, that don't come out of settlement)
+  const weekOther = weekManualExpenses.reduce((s,e) => s + e.amount, 0);
 
   // Fixed costs total
   const weekFixed = fixedCosts.reduce((s,fc) => s + fc.amount, 0);
@@ -3628,11 +3647,15 @@ function renderLoads() {
   // Other expenses
   document.getElementById('loadWeekOther').textContent = '$' + fmt(weekOther);
   const otherListEl = document.getElementById('loadWeekOtherList');
-  if (weekOtherReceipts.length) {
+  if (weekManualExpenses.length) {
     otherListEl.style.display = 'block';
-    otherListEl.innerHTML = weekOtherReceipts.map(r =>
-      `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0">
-        <span>${r.vendor || r.category}</span><span style="color:#e94560">$${fmt(r.amount)}</span>
+    otherListEl.innerHTML = weekManualExpenses.map(e =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#666;padding:2px 0">
+        <span>${e.name}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="color:#e94560">$${fmt(e.amount)}</span>
+          <button onclick="deleteWeekManualExpense('${e.id}')" style="background:none;border:none;color:#666;font-size:13px;cursor:pointer;padding:0 2px">🗑️</button>
+        </span>
       </div>`).join('');
   } else {
     otherListEl.style.display = 'none';
@@ -3677,7 +3700,9 @@ function deleteLoad(id) {
 function confirmNewWeek() {
   if (confirm('Start a new week? This clears all current loads.')) {
     weekLoads = [];
+    weekManualExpenses = [];
     saveWeekLoads();
+    saveWeekManualExpenses();
     renderLoads();
     showToast('New week started ✅');
   }
