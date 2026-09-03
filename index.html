@@ -1231,12 +1231,14 @@ async function ensureFolder() {
 async function driveGet(path) {
   const r = await fetch('https://www.googleapis.com/drive/v3/' + path, { headers: { Authorization: 'Bearer ' + token } });
   if (r.status === 401) { signOut(); throw new Error('auth'); }
+  if (!r.ok) { throw new Error('Drive request failed (' + r.status + ')'); }
   return r.json();
 }
 async function drivePost(path, body) {
   const r = await fetch('https://www.googleapis.com/drive/v3/' + path, {
     method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
+  if (!r.ok) { throw new Error('Drive request failed (' + r.status + ')'); }
   return r.json();
 }
 
@@ -1287,14 +1289,16 @@ async function saveIndex() {
   const blob = new Blob([content], { type: 'application/json' });
   const res = await driveGet(`files?q='${folderId}' in parents and name='receipts.json' and trashed=false&fields=files(id)`);
   if (res.files && res.files.length) {
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, {
+    const putRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, {
       method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob
     });
+    if (!putRes.ok) { throw new Error('receipts.json update failed (' + putRes.status + ')'); }
   } else {
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: 'receipts.json', parents: [folderId] })], { type: 'application/json' }));
     form.append('file', blob);
-    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+    const postRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+    if (!postRes.ok) { throw new Error('receipts.json create failed (' + postRes.status + ')'); }
   }
 }
 
@@ -2255,13 +2259,17 @@ async function doSaveReceipt() {
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: `receipt_${id}.jpg`, parents: [folderId] })], { type: 'application/json' }));
     form.append('file', photoBlob);
-    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
-    }).then(r => r.json());
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+    });
+    if (!upRes.ok) { throw new Error('Photo upload failed (' + upRes.status + ')'); }
+    const up = await upRes.json();
+    if (!up.id) { throw new Error('Photo upload did not return a file id'); }
+    const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
       method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
+    if (!permRes.ok) { throw new Error('Setting photo permissions failed (' + permRes.status + ')'); }
     updateLoading('Saving receipt record...');
     receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, gallons: currentResult.gallons || '', odometer: currentResult.odometer || '', mpg: currentResult.mpg || '', photoFileId: up.id, photoThumb: thumb, savedAt: new Date().toISOString() });
     receipts.sort(function(a,b){ var da=parseReceiptDate(a.date,a.savedAt); var db=parseReceiptDate(b.date,b.savedAt); return db-da; });
