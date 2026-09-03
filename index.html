@@ -2253,8 +2253,10 @@ async function doSaveReceipt() {
   try {
     const id = Date.now().toString();
     // Full-res for Drive upload, small thumb for JSON (keeps receipts.json fast to load)
-    const fullRes = await compress(currentPhotoBlob, 1200, 0.75);
-    const thumb = await compressThumb(currentPhotoBlob);
+    const [fullRes, thumb] = await Promise.all([
+      compress(currentPhotoBlob, 1200, 0.75),
+      compressThumb(currentPhotoBlob)
+    ]);
     const photoBlob = await fetch(fullRes).then(r => r.blob());
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: `receipt_${id}.jpg`, parents: [folderId] })], { type: 'application/json' }));
@@ -2265,15 +2267,14 @@ async function doSaveReceipt() {
     if (!upRes.ok) { throw new Error('Photo upload failed (' + upRes.status + ')'); }
     const up = await upRes.json();
     if (!up.id) { throw new Error('Photo upload did not return a file id'); }
-    const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
-    if (!permRes.ok) { throw new Error('Setting photo permissions failed (' + permRes.status + ')'); }
     updateLoading('Saving receipt record...');
     receipts.unshift({ id, vendor: currentResult.vendor, date: currentResult.date, amount: parseFloat(currentResult.amount), category: currentResult.category, notes: currentResult.notes, gallons: currentResult.gallons || '', odometer: currentResult.odometer || '', mpg: currentResult.mpg || '', photoFileId: up.id, photoThumb: thumb, savedAt: new Date().toISOString() });
     receipts.sort(function(a,b){ var da=parseReceiptDate(a.date,a.savedAt); var db=parseReceiptDate(b.date,b.savedAt); return db-da; });
-    await saveIndex();
+    const permPromise = fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    }).then(r => { if (!r.ok) throw new Error('Setting photo permissions failed (' + r.status + ')'); });
+    await Promise.all([permPromise, saveIndex()]);
     currentPhoto = null; currentPhotoBlob = null; currentResult = null;
     document.getElementById('receiptPreview').style.display = 'none';
     document.getElementById('aiResult').style.display = 'none';
