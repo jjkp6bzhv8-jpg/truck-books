@@ -958,6 +958,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="loadDuplicateModal">
+  <div class="modal">
+    <h3>⚠️ Duplicate Load?</h3>
+    <p id="loadDuplicateModalMsg" style="font-size:13px;color:#888;margin-bottom:16px;line-height:1.6"></p>
+    <div class="modal-btns">
+      <button class="btn btn-dark" onclick="closeLoadDuplicateModal()">Cancel</button>
+      <button class="btn btn-red" onclick="confirmAddLoadAnyway()">Add Anyway</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="deleteModal">
   <div class="modal">
     <h3>Delete This Receipt?</h3>
@@ -3579,7 +3590,33 @@ function saveManualLoad() {
   document.getElementById('loadManualForm').style.display = 'none';
 }
 
+let pendingLoadData = null;
+
 function addLoad(data) {
+  // ── DUPLICATE CHECK ── (skip if no order number was entered/read)
+  const order = (data.order || '').trim().toLowerCase();
+  const dup = order ? weekLoads.find(l => (l.order || '').trim().toLowerCase() === order) : null;
+  if (dup) {
+    pendingLoadData = data;
+    document.getElementById('loadDuplicateModalMsg').textContent =
+      'A load already exists for order ' + dup.order + ' (' + (dup.pickup || '?') + ' → ' + (dup.delivery || '?') + ', $' + fmt(dup.rate) + '). Are you sure you want to add it again?';
+    document.getElementById('loadDuplicateModal').classList.add('open');
+    return;
+  }
+  doAddLoad(data);
+}
+
+function closeLoadDuplicateModal() {
+  document.getElementById('loadDuplicateModal').classList.remove('open');
+  pendingLoadData = null;
+}
+
+function confirmAddLoadAnyway() {
+  document.getElementById('loadDuplicateModal').classList.remove('open');
+  if (pendingLoadData) { doAddLoad(pendingLoadData); pendingLoadData = null; }
+}
+
+function doAddLoad(data) {
   const rpm = data.miles > 0 ? (data.rate / data.miles).toFixed(2) : '—';
   weekLoads.unshift({ id: Date.now().toString(), ...data, rpm, addedAt: new Date().toISOString() });
   saveWeekLoads();
