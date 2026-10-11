@@ -934,6 +934,12 @@
       <button class="btn btn-red" id="eldRecoveryBtn" onclick="recoverEldLogs()">🚨 Recover ELD Logs</button>
     </div>
     <div class="card">
+      <div class="card-title">🚀 Speed Up ELD Saves</div>
+      <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">One-time fix for slow ELD log saves. Makes the small in-app previews smaller. Your full-quality log photos in Google Drive are NOT touched, and a backup copy of your log list is saved to Drive first.</p>
+      <div id="eldShrinkStatus" style="font-size:13px;color:#2ed573;margin-bottom:8px;display:none;line-height:1.6"></div>
+      <button class="btn btn-red" id="eldShrinkBtn" onclick="shrinkEldPreviews()">🚀 Speed Up ELD Saves</button>
+    </div>
+    <div class="card">
       <div class="card-title">⚡ Optimize Data</div>
       <p style="font-size:13px;color:#666;margin-bottom:8px;line-height:1.6">Shrinks thumbnails stored in your receipts, ELD logs, settlements, and BOLs. Fixes slow loading and missing data on weak signal. Your photos in Google Drive are NOT affected.</p>
       <div id="optimizeStatus" style="font-size:13px;color:#2ed573;margin-bottom:8px;display:none"></div>
@@ -1346,14 +1352,16 @@ async function saveEldIndex() {
   const blob = new Blob([content], { type: 'application/json' });
   const res = await driveGet(`files?q='${folderId}' in parents and name='eld_logs.json' and trashed=false&fields=files(id)`);
   if (res.files && res.files.length) {
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, {
+    const putRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, {
       method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob
     });
+    if (!putRes.ok) throw new Error('eld_logs.json update failed (' + putRes.status + ')');
   } else {
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: 'eld_logs.json', parents: [folderId] })], { type: 'application/json' }));
     form.append('file', blob);
-    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+    const postRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+    if (!postRes.ok) throw new Error('eld_logs.json create failed (' + postRes.status + ')');
   }
 }
 
@@ -1717,19 +1725,24 @@ async function saveEldLog() {
   try {
     const id = Date.now().toString();
     const fullRes = await compress(eldCurrentPhotoBlob, 1200, 0.75);
-    const thumb = await compressThumb(eldCurrentPhotoBlob);
+    // Small preview only for the list file — the full photo goes to Drive below
+    const thumb = await compressEldPreview(eldCurrentPhotoBlob);
     const photoBlob = await fetch(fullRes).then(r => r.blob());
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: `eld_${id}.jpg`, parents: [folderId] })], { type: 'application/json' }));
     form.append('file', photoBlob);
-    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
-    }).then(r => r.json());
+    });
+    if (!upRes.ok) throw new Error('Photo upload failed (' + upRes.status + ')');
+    const up = await upRes.json();
+    if (!up.id) throw new Error('Photo upload did not return a file id');
 
-    await fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
+    // Sharing permission is not needed to save — don't make the user wait on it
+    fetch(`https://www.googleapis.com/drive/v3/files/${up.id}/permissions`, {
       method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
+    }).catch(err => console.error('ELD permission error', err));
 
     updateLoading('Saving log record...');
     eldLogs.unshift({ id, date: logDate, miles, awayFromHome: eldAwayFromHome, photoFileId: up.id, photoThumb: thumb, savedAt: new Date().toISOString() });
@@ -1757,7 +1770,7 @@ async function saveEldLog() {
     renderEld();
   } catch(e) {
     btn.textContent = '💾 Save Log to Google Drive'; btn.disabled = false;
-    hideLoading(); showToast('Save failed. Try again.'); console.error(e);
+    hideLoading(); showToast('Log NOT saved: ' + (e.message || 'error') + '. Try again.'); console.error(e);
   }
 }
 
@@ -2228,6 +2241,12 @@ function compress(file, max, q) {
 // Small thumbnail for JSON storage (keeps file size tiny for fast loads)
 function compressThumb(file) {
   return compress(file, 800, 0.75);
+}
+
+// ELD list preview — kept small because eld_logs.json is re-uploaded on every save.
+// The full-quality photo always lives in Drive as its own file (photoFileId).
+function compressEldPreview(file) {
+  return compress(file, 400, 0.6);
 }
 
 // ── SAVE RECEIPT TO DRIVE ──
@@ -3000,8 +3019,9 @@ async function exportEldPhotos() {
   let list = eldLogs.filter(e => exportDateFilter(e.date, e.savedAt, from, to));
   list = list.slice().sort((a, b) => parseReceiptDate(a.date, a.savedAt) - parseReceiptDate(b.date, b.savedAt));
 
-  const withPhoto = list.filter(e => e.photoThumb);
+  const withPhoto = list.filter(e => e.photoFileId || e.photoThumb);
   const skipped = list.length - withPhoto.length;
+  let usedPreview = 0;
 
   if (!withPhoto.length) {
     showToast(skipped ? `${skipped} log(s) have no saved photo` : 'No ELD logs found for this range');
@@ -3040,18 +3060,29 @@ async function exportEldPhotos() {
       const availW = pageW - margin * 2;
       const availH = pageH - imgTop - margin;
 
-      const { w, h } = await imgDims(e.photoThumb);
+      // Use the full-quality photo from Drive; fall back to the in-app preview only if Drive can't be reached
+      let imgData = null;
+      if (e.photoFileId && token) {
+        try { imgData = await fetchDriveImageAsDataUrl(e.photoFileId); } catch (err) { console.error('ELD export Drive fetch failed', err); }
+      }
+      if (!imgData) { imgData = e.photoThumb; if (imgData) usedPreview++; }
+      if (!imgData) continue;
+
+      const { w, h } = await imgDims(imgData);
       let drawW = availW, drawH = (h / w) * drawW;
       if (drawH > availH) { drawH = availH; drawW = (w / h) * drawH; }
       const x = margin + (availW - drawW) / 2;
 
-      doc.addImage(e.photoThumb, 'JPEG', x, imgTop, drawW, drawH);
+      doc.addImage(imgData, 'JPEG', x, imgTop, drawW, drawH);
     }
 
     const fname = `TruckBooks_ELDLogs_${from || 'all'}_to_${to || 'all'}.pdf`;
     doc.save(fname);
     hideLoading();
-    showToast(skipped ? `Done. ${skipped} log(s) skipped (no photo saved)` : 'PDF saved');
+    let msg = 'PDF saved';
+    if (skipped) msg += `. ${skipped} log(s) skipped (no photo saved)`;
+    if (usedPreview) msg += `. ${usedPreview} used lower-quality preview (Drive photo unavailable)`;
+    showToast(msg);
   } catch (e2) {
     hideLoading();
     showToast('Error building PDF: ' + e2.message);
@@ -3937,7 +3968,7 @@ async function recoverEldLogs() {
         });
         if (!imgRes.ok) { failed++; continue; }
         const blob = await imgRes.blob();
-        const thumb = await compressThumb(blob);
+        const thumb = await compressEldPreview(blob);
 
         // Find existing log entry and update thumbnail, or skip if not found
         const existing = eldLogs.find(l => l.photoFileId === file.id);
@@ -3969,6 +4000,62 @@ async function recoverEldLogs() {
     setStatus('❌ Failed: ' + e.message);
     btn.disabled = false;
     btn.textContent = '🚨 Recover ELD Logs';
+  }
+}
+
+// ── SPEED UP ELD SAVES ──
+// Shrinks the preview copies stored inside eld_logs.json. Safety rules:
+//  1. Refuses to run unless the log list loaded successfully.
+//  2. Saves a dated backup copy of eld_logs.json to Drive BEFORE changing anything; stops if the backup fails.
+//  3. Only shrinks previews for logs that have their own full photo file in Drive (photoFileId).
+//     Logs without one keep their preview untouched, since it's the only copy.
+//  4. Never deletes anything.
+async function shrinkEldPreviews() {
+  if (!token) return showToast('Sign in to Google Drive first');
+  if (!eldLogsLoaded) return showToast('ELD logs did not load — refresh and try again');
+  const btn = document.getElementById('eldShrinkBtn');
+  const status = document.getElementById('eldShrinkStatus');
+  const setStatus = m => { status.textContent = m; };
+  btn.disabled = true; btn.textContent = 'Working...';
+  status.style.display = 'block';
+
+  try {
+    // 1. Backup
+    setStatus('Saving backup copy of your log list to Drive...');
+    const stamp = new Date().toISOString().slice(0,10);
+    const backupForm = new FormData();
+    backupForm.append('metadata', new Blob([JSON.stringify({ name: 'eld_logs_backup_' + stamp + '.json', parents: [folderId] })], { type: 'application/json' }));
+    backupForm.append('file', new Blob([JSON.stringify(eldLogs)], { type: 'application/json' }));
+    const bRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: backupForm });
+    if (!bRes.ok) throw new Error('Backup failed (' + bRes.status + ') — nothing was changed');
+    const bJson = await bRes.json();
+    if (!bJson.id) throw new Error('Backup did not confirm — nothing was changed');
+
+    // 2. Shrink previews (only where a full Drive photo exists)
+    const before = JSON.stringify(eldLogs).length;
+    let shrunk = 0, keptNoDrive = 0;
+    for (let i = 0; i < eldLogs.length; i++) {
+      const l = eldLogs[i];
+      if (!l.photoThumb) continue;
+      if (!l.photoFileId) { keptNoDrive++; continue; }
+      if (l.photoThumb.length <= 40000) continue; // already small
+      setStatus('Shrinking previews... ' + (i + 1) + ' of ' + eldLogs.length);
+      const blob = await fetch(l.photoThumb).then(r => r.blob());
+      const small = await compressEldPreview(blob);
+      if (small && small.length < l.photoThumb.length) { l.photoThumb = small; shrunk++; }
+    }
+
+    // 3. Save
+    if (shrunk) { setStatus('Saving...'); await saveEldIndex(); }
+    const after = JSON.stringify(eldLogs).length;
+    const mb = n => (n / 1048576).toFixed(1);
+    setStatus('✅ Done. Log list went from ' + mb(before) + ' MB to ' + mb(after) + ' MB. ' + shrunk + ' previews shrunk. All ' + eldLogs.length + ' logs still there.' + (keptNoDrive ? ' ' + keptNoDrive + ' log(s) left as-is (no separate Drive photo).' : '') + ' Backup saved as eld_logs_backup_' + stamp + '.json.');
+    btn.textContent = '✅ Done';
+    renderEld();
+  } catch (e) {
+    console.error('shrinkEldPreviews error', e);
+    setStatus('❌ ' + e.message);
+    btn.disabled = false; btn.textContent = '🚀 Speed Up ELD Saves';
   }
 }
 
@@ -4014,16 +4101,7 @@ async function optimizeData() {
     }
     if (changed) { setStatus('Saving receipts...'); await saveIndex(); }
 
-    // Optimize ELD logs
-    setStatus('Optimizing ELD logs...');
-    changed = false;
-    for (let i = 0; i < eldLogs.length; i++) {
-      if (eldLogs[i].photoThumb && eldLogs[i].photoThumb.length > 20000) {
-        eldLogs[i].photoThumb = await recompressThumbFromDataUrl(eldLogs[i].photoThumb);
-        changed = true;
-      }
-    }
-    if (changed) { setStatus('Saving ELD logs...'); await saveEldIndex(); }
+    // ELD logs are handled by "Speed Up ELD Saves" (shrinkEldPreviews), which backs up first
 
     // Optimize settlements
     setStatus('Optimizing settlements...');
