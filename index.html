@@ -287,8 +287,8 @@
         <input type="number" id="loadMiles" placeholder="e.g. 766" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
         <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Rate ($)</label>
         <input type="number" id="loadRate" placeholder="e.g. 1372.00" step="0.01" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
-        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Pickup Date</label>
-        <input type="date" id="loadPickupDate" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Delivery Date</label>
+        <input type="date" id="loadDeliveryDate" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
         <div style="display:flex;gap:8px">
           <div style="flex:1">
             <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Deadhead Mi</label>
@@ -3637,7 +3637,7 @@ function showManualLoadEntry() {
   document.getElementById('loadDelivery').value = '';
   document.getElementById('loadMiles').value = '';
   document.getElementById('loadRate').value = '';
-  document.getElementById('loadPickupDate').value = isoToday();
+  document.getElementById('loadDeliveryDate').value = isoToday();
   document.getElementById('loadDeadhead').value = '';
   document.getElementById('loadFuelPrice').value = '';
 }
@@ -3684,7 +3684,7 @@ function loadCalc(l) {
 function updateLoadField(id, field, value) {
   const l = weekLoads.find(x => x.id === id);
   if (!l) return;
-  if (field === 'pickupDate') l.pickupDate = value || '';
+  if (field === 'deliveryDate') l.deliveryDate = value || '';
   else l[field] = value === '' ? '' : (parseFloat(value) || 0);
   saveWeekLoads();
   renderLoads();
@@ -3697,10 +3697,10 @@ function saveManualLoad() {
   const miles = parseFloat(document.getElementById('loadMiles').value) || 0;
   const rate = parseFloat(document.getElementById('loadRate').value) || 0;
   if (!rate) return showToast('Enter a rate');
-  const pickupDate = document.getElementById('loadPickupDate').value || '';
+  const deliveryDate = document.getElementById('loadDeliveryDate').value || '';
   const deadhead = parseFloat(document.getElementById('loadDeadhead').value) || 0;
   const fuelPrice = parseFloat(document.getElementById('loadFuelPrice').value) || 0;
-  addLoad({ order, pickup, delivery, miles, rate, pickupDate, deadhead, fuelPrice });
+  addLoad({ order, pickup, delivery, miles, rate, deliveryDate, deadhead, fuelPrice });
   document.getElementById('loadManualForm').style.display = 'none';
 }
 
@@ -3751,16 +3751,16 @@ async function handleLoadPhoto(input) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
-        { type: 'text', text: 'Read this load confirmation and extract the order number, pickup, delivery, miles, rate, and the PICKUP date (the date the load is scheduled to be picked up at the shipper — NOT the booking/tender date and NOT the delivery date). If no pickup date is shown, use an empty string. Respond ONLY with valid JSON, no explanation or preamble: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00,"pickupDate":"MM/DD/YYYY"}' }
+        { type: 'text', text: 'Read this load confirmation and extract the order number, pickup, delivery, miles, rate, and the DELIVERY date (the date the load is scheduled to be delivered to the consignee — NOT the booking/tender date and NOT the pickup date). If no delivery date is shown, use an empty string. Respond ONLY with valid JSON, no explanation or preamble: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00,"deliveryDate":"MM/DD/YYYY"}' }
       ]}]})
     });
     const d = await resp.json();
     const result = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
-    result.pickupDate = mdyToIso(result.pickupDate);
+    result.deliveryDate = mdyToIso(result.deliveryDate);
     result.deadhead = 0;
     result.fuelPrice = 0;
     addLoad(result);
-    if (!result.pickupDate) showToast('No pickup date found — set it on the load card');
+    if (!result.deliveryDate) showToast('No delivery date found — set it on the load card');
   } catch(e) { showToast('Could not read load. Try manual entry.'); console.error(e); }
   document.getElementById('loadSpinner').style.display = 'none';
   input.value = '';
@@ -3837,7 +3837,7 @@ function renderLoads() {
   netEl.textContent = '$' + fmt(Math.abs(weekNet)) + (weekNet >= 0 ? ' ▲' : ' ▼');
   netEl.style.color = weekNet >= 0 ? '#2ed573' : '#e94560';
 
-  // ── DAILY GOAL (Thu–Wed, by pickup date) ──
+  // ── DAILY GOAL (Thu–Wed, by delivery date) ──
   const goal = getDailyGoal();
   const planMpg = getPlanMpg();
   const gIn = document.getElementById('dailyGoalInput');
@@ -3850,7 +3850,7 @@ function renderLoads() {
   let daysWorked = 0, weekGoalNet = 0, missingPrice = 0;
   const todayIso = isoToday();
   document.getElementById('goalDaysList').innerHTML = weekDays.map(iso => {
-    const dayLoads = weekLoads.filter(l => l.pickupDate === iso);
+    const dayLoads = weekLoads.filter(l => l.deliveryDate === iso);
     const dayNet = dayLoads.reduce((s,l) => s + loadCalc(l).net, 0);
     const noPrice = dayLoads.some(l => !loadCalc(l).hasPrice);
     if (noPrice) missingPrice += dayLoads.filter(l => !loadCalc(l).hasPrice).length;
@@ -3872,16 +3872,16 @@ function renderLoads() {
   }).join('');
   const weekTarget = goal * daysWorked;
   const diff = weekGoalNet - weekTarget;
-  const undated = weekLoads.filter(l => !l.pickupDate).length;
-  const otherWeek = weekLoads.filter(l => l.pickupDate && !weekDays.includes(l.pickupDate)).length;
+  const undated = weekLoads.filter(l => !l.deliveryDate).length;
+  const otherWeek = weekLoads.filter(l => l.deliveryDate && !weekDays.includes(l.deliveryDate)).length;
   document.getElementById('goalWeekSummary').innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Days working</span><span style="color:#f0f0f0">${daysWorked}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Week goal (${daysWorked} × $${fmt(goal)})</span><span style="color:#f0f0f0">$${fmt(weekTarget)}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Net after fuel</span><span style="color:#f0f0f0">$${fmt(weekGoalNet)}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0 0"><span style="color:#888">${diff >= 0 ? 'Over goal' : 'Under goal'}</span><span style="color:${diff >= 0 ? '#2ed573' : '#e94560'}">${diff >= 0 ? '+' : '−'}$${fmt(Math.abs(diff))}</span></div>
     ${missingPrice ? `<div style="color:#f0a500;font-size:11px;margin-top:6px">⚠️ ${missingPrice} load(s) missing fuel price — net is overstated until you enter it.</div>` : ''}
-    ${undated ? `<div style="color:#f0a500;font-size:11px;margin-top:4px">⚠️ ${undated} load(s) have no pickup date — not counted until you set one.</div>` : ''}
-    ${otherWeek ? `<div style="color:#888;font-size:11px;margin-top:4px">${otherWeek} load(s) pick up outside this Thu–Wed week — not counted here.</div>` : ''}`;
+    ${undated ? `<div style="color:#f0a500;font-size:11px;margin-top:4px">⚠️ ${undated} load(s) have no delivery date — not counted until you set one.</div>` : ''}
+    ${otherWeek ? `<div style="color:#888;font-size:11px;margin-top:4px">${otherWeek} load(s) deliver outside this Thu–Wed week — not counted here.</div>` : ''}`;
 
   const inputStyle = 'width:100%;background:#0d0d0d;border:1px solid #333;border-radius:6px;padding:6px 8px;color:#f0f0f0;font-size:13px';
   el.innerHTML = weekLoads.map(l => {
@@ -3901,8 +3901,8 @@ function renderLoads() {
       </div>
       <div style="display:flex;gap:6px;margin-top:10px">
         <div style="flex:1.4">
-          <div style="color:${l.pickupDate ? '#666' : '#f0a500'};font-size:10px;text-transform:uppercase;margin-bottom:3px">Pickup Date${l.pickupDate ? '' : ' ⚠️'}</div>
-          <input type="date" value="${l.pickupDate || ''}" onchange="updateLoadField('${l.id}','pickupDate',this.value)" style="${inputStyle}">
+          <div style="color:${l.deliveryDate ? '#666' : '#f0a500'};font-size:10px;text-transform:uppercase;margin-bottom:3px">Delivery Date${l.deliveryDate ? '' : ' ⚠️'}</div>
+          <input type="date" value="${l.deliveryDate || ''}" onchange="updateLoadField('${l.id}','deliveryDate',this.value)" style="${inputStyle}">
         </div>
         <div style="flex:1">
           <div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Deadhead Mi</div>
