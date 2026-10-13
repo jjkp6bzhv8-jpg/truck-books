@@ -286,7 +286,19 @@
         <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Miles</label>
         <input type="number" id="loadMiles" placeholder="e.g. 766" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
         <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Rate ($)</label>
-        <input type="number" id="loadRate" placeholder="e.g. 1372.00" step="0.01" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:12px">
+        <input type="number" id="loadRate" placeholder="e.g. 1372.00" step="0.01" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Pickup Date</label>
+        <input type="date" id="loadPickupDate" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Deadhead Mi</label>
+            <input type="number" id="loadDeadhead" placeholder="0" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:12px">
+          </div>
+          <div style="flex:1">
+            <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Fuel $/Gal</label>
+            <input type="number" id="loadFuelPrice" placeholder="e.g. 3.89" step="0.001" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:12px">
+          </div>
+        </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-red" onclick="saveManualLoad()" style="flex:1">✅ Add Load</button>
           <button class="btn btn-dark" onclick="document.getElementById('loadManualForm').style.display='none'" style="flex:1">✕ Cancel</button>
@@ -302,6 +314,23 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="card-title" style="margin-bottom:0">📊 This Week</div>
         <button class="btn btn-dark" onclick="confirmNewWeek()" style="padding:6px 12px;font-size:12px">🔄 New Week</button>
+      </div>
+      <!-- Daily Goal (Thu–Wed) -->
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">🎯 Daily Goal (after fuel)</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div style="flex:1">
+            <div style="color:#666;font-size:11px;margin-bottom:4px">Goal $/day</div>
+            <input type="number" id="dailyGoalInput" step="0.01" onchange="saveGoalSettings()" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#f0f0f0;font-size:14px">
+          </div>
+          <div style="flex:1">
+            <div style="color:#666;font-size:11px;margin-bottom:4px">Plan MPG</div>
+            <input type="number" id="planMpgInput" step="0.1" onchange="saveGoalSettings()" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#f0f0f0;font-size:14px">
+          </div>
+        </div>
+        <div style="color:#555;font-size:11px;margin-bottom:6px">Tap a day to mark it Working / Off. Days with a load count as working.</div>
+        <div id="goalDaysList"></div>
+        <div id="goalWeekSummary" style="margin-top:10px;border-top:1px solid #333;padding-top:10px"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
@@ -3608,6 +3637,57 @@ function showManualLoadEntry() {
   document.getElementById('loadDelivery').value = '';
   document.getElementById('loadMiles').value = '';
   document.getElementById('loadRate').value = '';
+  document.getElementById('loadPickupDate').value = isoToday();
+  document.getElementById('loadDeadhead').value = '';
+  document.getElementById('loadFuelPrice').value = '';
+}
+
+// ── DAILY GOAL HELPERS ──
+function isoFromDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function isoToday() { return isoFromDate(new Date()); }
+function dateFromIso(s) { const p = String(s).split('-'); return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2])); }
+function mdyToIso(s) {
+  if (!s || !String(s).includes('/')) return '';
+  const p = String(s).split('/');
+  let y = parseInt(p[2]); if (isNaN(y)) y = new Date().getFullYear(); if (y < 100) y += 2000;
+  const m = parseInt(p[0]), d = parseInt(p[1]);
+  if (!m || !d) return '';
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+function getDailyGoal() { const v = parseFloat(localStorage.getItem('tb_dailyGoal')); return isNaN(v) ? 369 : v; }
+function getPlanMpg() { const v = parseFloat(localStorage.getItem('tb_planMpg')); return (isNaN(v) || v <= 0) ? 7 : v; }
+function saveGoalSettings() {
+  const g = parseFloat(document.getElementById('dailyGoalInput').value);
+  const m = parseFloat(document.getElementById('planMpgInput').value);
+  if (!isNaN(g) && g >= 0) localStorage.setItem('tb_dailyGoal', String(g));
+  if (!isNaN(m) && m > 0) localStorage.setItem('tb_planMpg', String(m));
+  renderLoads();
+}
+let workDays = JSON.parse(localStorage.getItem('tb_workDays') || '[]');
+function saveWorkDays() { localStorage.setItem('tb_workDays', JSON.stringify(workDays)); }
+function toggleWorkDay(iso) {
+  if (workDays.includes(iso)) workDays = workDays.filter(d => d !== iso); else workDays.push(iso);
+  saveWorkDays();
+  renderLoads();
+}
+// Per-load math: loaded + deadhead miles, gallons at plan MPG, fuel cost, net after fuel
+function loadCalc(l) {
+  const loaded = parseFloat(l.miles) || 0;
+  const dh = parseFloat(l.deadhead) || 0;
+  const totalMiles = loaded + dh;
+  const gallons = totalMiles / getPlanMpg();
+  const price = parseFloat(l.fuelPrice) || 0;
+  const fuelCost = gallons * price;
+  const net = (parseFloat(l.rate) || 0) - fuelCost;
+  return { loaded, dh, totalMiles, gallons, price, fuelCost, net, hasPrice: price > 0 };
+}
+function updateLoadField(id, field, value) {
+  const l = weekLoads.find(x => x.id === id);
+  if (!l) return;
+  if (field === 'pickupDate') l.pickupDate = value || '';
+  else l[field] = value === '' ? '' : (parseFloat(value) || 0);
+  saveWeekLoads();
+  renderLoads();
 }
 
 function saveManualLoad() {
@@ -3617,7 +3697,10 @@ function saveManualLoad() {
   const miles = parseFloat(document.getElementById('loadMiles').value) || 0;
   const rate = parseFloat(document.getElementById('loadRate').value) || 0;
   if (!rate) return showToast('Enter a rate');
-  addLoad({ order, pickup, delivery, miles, rate });
+  const pickupDate = document.getElementById('loadPickupDate').value || '';
+  const deadhead = parseFloat(document.getElementById('loadDeadhead').value) || 0;
+  const fuelPrice = parseFloat(document.getElementById('loadFuelPrice').value) || 0;
+  addLoad({ order, pickup, delivery, miles, rate, pickupDate, deadhead, fuelPrice });
   document.getElementById('loadManualForm').style.display = 'none';
 }
 
@@ -3668,12 +3751,16 @@ async function handleLoadPhoto(input) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
-        { type: 'text', text: 'Read this load confirmation and extract the order number, pickup, delivery, miles, and rate. Respond ONLY with valid JSON, no explanation or preamble: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00}' }
+        { type: 'text', text: 'Read this load confirmation and extract the order number, pickup, delivery, miles, rate, and the PICKUP date (the date the load is scheduled to be picked up at the shipper — NOT the booking/tender date and NOT the delivery date). If no pickup date is shown, use an empty string. Respond ONLY with valid JSON, no explanation or preamble: {"order":"APE1595","pickup":"BRUNAL","delivery":"BI IL","miles":766,"rate":1372.00,"pickupDate":"MM/DD/YYYY"}' }
       ]}]})
     });
     const d = await resp.json();
     const result = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    result.pickupDate = mdyToIso(result.pickupDate);
+    result.deadhead = 0;
+    result.fuelPrice = 0;
     addLoad(result);
+    if (!result.pickupDate) showToast('No pickup date found — set it on the load card');
   } catch(e) { showToast('Could not read load. Try manual entry.'); console.error(e); }
   document.getElementById('loadSpinner').style.display = 'none';
   input.value = '';
@@ -3750,21 +3837,89 @@ function renderLoads() {
   netEl.textContent = '$' + fmt(Math.abs(weekNet)) + (weekNet >= 0 ? ' ▲' : ' ▼');
   netEl.style.color = weekNet >= 0 ? '#2ed573' : '#e94560';
 
-  el.innerHTML = weekLoads.map(l => `
+  // ── DAILY GOAL (Thu–Wed, by pickup date) ──
+  const goal = getDailyGoal();
+  const planMpg = getPlanMpg();
+  const gIn = document.getElementById('dailyGoalInput');
+  const mIn = document.getElementById('planMpgInput');
+  if (document.activeElement !== gIn) gIn.value = goal;
+  if (document.activeElement !== mIn) mIn.value = planMpg;
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(weekStart); d.setDate(weekStart.getDate() + i); weekDays.push(isoFromDate(d)); }
+  let daysWorked = 0, weekGoalNet = 0, missingPrice = 0;
+  const todayIso = isoToday();
+  document.getElementById('goalDaysList').innerHTML = weekDays.map(iso => {
+    const dayLoads = weekLoads.filter(l => l.pickupDate === iso);
+    const dayNet = dayLoads.reduce((s,l) => s + loadCalc(l).net, 0);
+    const noPrice = dayLoads.some(l => !loadCalc(l).hasPrice);
+    if (noPrice) missingPrice += dayLoads.filter(l => !loadCalc(l).hasPrice).length;
+    const working = dayLoads.length > 0 || workDays.includes(iso);
+    if (working) daysWorked++;
+    weekGoalNet += dayNet;
+    const d = dateFromIso(iso);
+    const label = dayNames[d.getDay()] + ' ' + (d.getMonth()+1) + '/' + d.getDate();
+    let status, color;
+    if (!working) { status = 'Off'; color = '#555'; }
+    else if (dayNet >= goal) { status = '✅ $' + fmt(dayNet); color = '#2ed573'; }
+    else { status = '❌ $' + fmt(dayNet); color = '#e94560'; }
+    const warn = noPrice ? ' <span style="color:#f0a500;font-size:11px">⚠️ fuel $</span>' : '';
+    const isToday = iso === todayIso ? 'border:1px solid #555;' : 'border:1px solid transparent;';
+    return `<div onclick="toggleWorkDay('${iso}')" style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-radius:6px;cursor:pointer;${isToday}background:${working ? '#222' : 'transparent'};margin-bottom:3px">
+      <span style="color:${working ? '#f0f0f0' : '#555'};font-size:13px;font-weight:600">${label}${dayLoads.length > 1 ? ' <span style="color:#888;font-weight:400">(' + dayLoads.length + ' loads)</span>' : ''}</span>
+      <span style="color:${color};font-size:13px;font-weight:700">${status}${warn}</span>
+    </div>`;
+  }).join('');
+  const weekTarget = goal * daysWorked;
+  const diff = weekGoalNet - weekTarget;
+  const undated = weekLoads.filter(l => !l.pickupDate).length;
+  const otherWeek = weekLoads.filter(l => l.pickupDate && !weekDays.includes(l.pickupDate)).length;
+  document.getElementById('goalWeekSummary').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Days working</span><span style="color:#f0f0f0">${daysWorked}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Week goal (${daysWorked} × $${fmt(goal)})</span><span style="color:#f0f0f0">$${fmt(weekTarget)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Net after fuel</span><span style="color:#f0f0f0">$${fmt(weekGoalNet)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0 0"><span style="color:#888">${diff >= 0 ? 'Over goal' : 'Under goal'}</span><span style="color:${diff >= 0 ? '#2ed573' : '#e94560'}">${diff >= 0 ? '+' : '−'}$${fmt(Math.abs(diff))}</span></div>
+    ${missingPrice ? `<div style="color:#f0a500;font-size:11px;margin-top:6px">⚠️ ${missingPrice} load(s) missing fuel price — net is overstated until you enter it.</div>` : ''}
+    ${undated ? `<div style="color:#f0a500;font-size:11px;margin-top:4px">⚠️ ${undated} load(s) have no pickup date — not counted until you set one.</div>` : ''}
+    ${otherWeek ? `<div style="color:#888;font-size:11px;margin-top:4px">${otherWeek} load(s) pick up outside this Thu–Wed week — not counted here.</div>` : ''}`;
+
+  const inputStyle = 'width:100%;background:#0d0d0d;border:1px solid #333;border-radius:6px;padding:6px 8px;color:#f0f0f0;font-size:13px';
+  el.innerHTML = weekLoads.map(l => {
+    const c = loadCalc(l);
+    return `
     <div class="card" style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <div style="font-weight:700;font-size:15px;color:#f0f0f0">${l.order || 'Load'}</div>
           <div style="font-size:13px;color:#888;margin-top:2px">${l.pickup || '—'} → ${l.delivery || '—'}</div>
           <div style="font-size:12px;color:#555;margin-top:2px">${l.miles ? l.miles + ' mi · $' + l.rpm + '/mi' : ''}</div>
-          <div style="font-size:12px;color:#777;margin-top:2px">${l.miles ? '⛽ Gallons needed: ' + (l.miles / 8).toFixed(1) + ' gal' : ''}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:18px;font-weight:700;color:#2ed573">$${fmt(parseFloat(l.rate||0))}</div>
           <button onclick="deleteLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e94560;font-size:12px;padding:4px 8px;cursor:pointer;margin-top:4px">🗑️ Delete</button>
         </div>
       </div>
-    </div>`).join('');
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <div style="flex:1.4">
+          <div style="color:${l.pickupDate ? '#666' : '#f0a500'};font-size:10px;text-transform:uppercase;margin-bottom:3px">Pickup Date${l.pickupDate ? '' : ' ⚠️'}</div>
+          <input type="date" value="${l.pickupDate || ''}" onchange="updateLoadField('${l.id}','pickupDate',this.value)" style="${inputStyle}">
+        </div>
+        <div style="flex:1">
+          <div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Deadhead Mi</div>
+          <input type="number" value="${l.deadhead || ''}" placeholder="0" onchange="updateLoadField('${l.id}','deadhead',this.value)" style="${inputStyle}">
+        </div>
+        <div style="flex:1">
+          <div style="color:${c.hasPrice ? '#666' : '#f0a500'};font-size:10px;text-transform:uppercase;margin-bottom:3px">Fuel $/Gal${c.hasPrice ? '' : ' ⚠️'}</div>
+          <input type="number" step="0.001" value="${l.fuelPrice || ''}" placeholder="0.00" onchange="updateLoadField('${l.id}','fuelPrice',this.value)" style="${inputStyle}">
+        </div>
+      </div>
+      ${c.totalMiles ? `<div style="font-size:12px;color:#777;margin-top:8px">⛽ ${c.loaded}${c.dh ? ' + ' + c.dh + ' deadhead = ' + c.totalMiles : ''} mi ÷ ${planMpg} mpg = ${c.gallons.toFixed(1)} gal${c.hasPrice ? ' × $' + c.price.toFixed(3) + ' = $' + fmt(c.fuelCost) : ''}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-top:6px">
+        <span style="color:#888">Net after fuel</span>
+        <span style="color:${c.hasPrice ? (c.net >= goal ? '#2ed573' : '#e94560') : '#f0a500'}">$${fmt(c.net)}${c.hasPrice ? '' : ' (no fuel $)'}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function deleteLoad(id) {
@@ -3778,8 +3933,10 @@ function confirmNewWeek() {
   if (confirm('Start a new week? This clears all current loads.')) {
     weekLoads = [];
     weekManualExpenses = [];
+    workDays = [];
     saveWeekLoads();
     saveWeekManualExpenses();
+    saveWorkDays();
     renderLoads();
     showToast('New week started ✅');
   }
