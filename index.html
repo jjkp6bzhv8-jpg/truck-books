@@ -296,7 +296,7 @@
           </div>
           <div style="flex:1">
             <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Fuel $/Gal</label>
-            <input type="number" id="loadFuelPrice" placeholder="e.g. 3.89" step="0.001" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:12px">
+            <input type="number" id="loadFuelPrice" placeholder="Auto from receipt" step="0.001" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:12px">
           </div>
         </div>
         <div style="display:flex;gap:8px">
@@ -3681,11 +3681,32 @@ function loadCalc(l) {
   const net = (parseFloat(l.rate) || 0) - fuelCost;
   return { loaded, dh, totalMiles, gallons, price, fuelCost, net, hasPrice: price > 0 };
 }
+// Price per gallon of the fuel in the tank = most recent fuel receipt (total ÷ gallons)
+function latestFuelReceiptPrice() {
+  const list = (typeof receipts !== 'undefined' && receipts ? receipts : [])
+    .filter(r => r.category === 'Fuel' && parseFloat(r.gallons) > 0 && parseFloat(r.amount) > 0)
+    .map(r => ({ price: parseFloat(r.amount) / parseFloat(r.gallons), d: parseReceiptDate(r.date, r.savedAt), date: r.date, savedAt: r.savedAt || '' }))
+    .filter(x => x.price >= 2 && x.price <= 9)
+    .sort((a,b) => (b.d - a.d) || String(b.savedAt).localeCompare(String(a.savedAt)));
+  return list.length ? { price: parseFloat(list[0].price.toFixed(3)), date: list[0].date } : null;
+}
+// Any load with no fuel price picks up the latest receipt price (typed prices are never overwritten)
+function fillMissingFuelPrices() {
+  const fp = latestFuelReceiptPrice();
+  if (!fp) return false;
+  let changed = false;
+  weekLoads.forEach(l => {
+    if (!(parseFloat(l.fuelPrice) > 0)) { l.fuelPrice = fp.price; l.fuelPriceFrom = fp.date || 'receipt'; changed = true; }
+  });
+  if (changed) saveWeekLoads();
+  return changed;
+}
 function updateLoadField(id, field, value) {
   const l = weekLoads.find(x => x.id === id);
   if (!l) return;
   if (field === 'deliveryDate') l.deliveryDate = value || '';
   else l[field] = value === '' ? '' : (parseFloat(value) || 0);
+  if (field === 'fuelPrice') l.fuelPriceFrom = (parseFloat(value) > 0) ? 'typed' : '';
   saveWeekLoads();
   renderLoads();
 }
@@ -3732,7 +3753,9 @@ function confirmAddLoadAnyway() {
 
 function doAddLoad(data) {
   const rpm = data.miles > 0 ? (data.rate / data.miles).toFixed(2) : '—';
+  if (parseFloat(data.fuelPrice) > 0) data.fuelPriceFrom = 'typed';
   weekLoads.unshift({ id: Date.now().toString(), ...data, rpm, addedAt: new Date().toISOString() });
+  fillMissingFuelPrices();
   saveWeekLoads();
   renderLoads();
   showToast('Load added ✅');
@@ -3838,6 +3861,7 @@ function renderLoads() {
   netEl.style.color = weekNet >= 0 ? '#2ed573' : '#e94560';
 
   // ── DAILY GOAL (Thu–Wed, by delivery date) ──
+  fillMissingFuelPrices();
   const goal = getDailyGoal();
   const planMpg = getPlanMpg();
   const gIn = document.getElementById('dailyGoalInput');
@@ -3914,6 +3938,7 @@ function renderLoads() {
         </div>
       </div>
       ${c.totalMiles ? `<div style="font-size:12px;color:#777;margin-top:8px">⛽ ${c.loaded}${c.dh ? ' + ' + c.dh + ' deadhead = ' + c.totalMiles : ''} mi ÷ ${planMpg} mpg = ${c.gallons.toFixed(1)} gal${c.hasPrice ? ' × $' + c.price.toFixed(3) + ' = $' + fmt(c.fuelCost) : ''}</div>` : ''}
+      ${c.hasPrice && l.fuelPriceFrom && l.fuelPriceFrom !== 'typed' ? `<div style="font-size:11px;color:#555;margin-top:2px">Fuel price from your ${l.fuelPriceFrom === 'receipt' ? 'latest' : l.fuelPriceFrom} fuel receipt</div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-top:6px">
         <span style="color:#888">Net after fuel</span>
         <span style="color:${c.hasPrice ? (c.net >= goal ? '#2ed573' : '#e94560') : '#f0a500'}">$${fmt(c.net)}${c.hasPrice ? '' : ' (no fuel $)'}</span>
