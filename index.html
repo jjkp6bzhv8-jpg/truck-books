@@ -344,7 +344,7 @@
       </div>
       <div style="background:#1a1a1a;border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
         <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Net Income</div>
-        <div id="loadWeekNet" style="color:#2ed573;font-size:20px;font-weight:700">$0.00</div>
+        <div id="loadWeekNetIncome" style="color:#2ed573;font-size:20px;font-weight:700">$0.00</div>
       </div>
       <div class="eld-counter-box" style="margin-bottom:8px">
         <div class="eld-split-counter">
@@ -3820,7 +3820,10 @@ function renderLoads() {
   const weekOther = weekManualExpenses.reduce((s,e) => s + e.amount, 0);
 
   // Fixed costs total
-  const weekFixed = fixedCosts.reduce((s,fc) => s + fc.amount, 0);
+  // Maintenance reserve — Swift takes 3¢ per mile (loaded + deadhead)
+  const maintMiles = weekLoads.reduce((s,l) => s + (parseFloat(l.miles)||0) + (parseFloat(l.deadhead)||0), 0);
+  const weekMaint = Math.round(maintMiles * 0.03 * 100) / 100;
+  const weekFixed = fixedCosts.reduce((s,fc) => s + fc.amount, 0) + weekMaint;
 
   const weekGross = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0), 0);
   const weekMiles = weekLoads.reduce((s,l) => s + (parseFloat(l.miles)||0), 0);
@@ -3830,7 +3833,7 @@ function renderLoads() {
   summary.style.display = 'block';
   document.getElementById('loadWeekGross').textContent = '$' + fmt(weekGross);
   document.getElementById('loadWeekFuel').textContent = '$' + fmt(weekFuel);
-  { const n = weekGross - weekFuel; const el = document.getElementById('loadWeekNet'); el.textContent = (n < 0 ? '−$' : '$') + fmt(Math.abs(n)); el.style.color = n < 0 ? '#e94560' : '#2ed573'; }
+  { const n = weekGross - weekFuel; const el = document.getElementById('loadWeekNetIncome'); el.textContent = (n < 0 ? '−$' : '$') + fmt(Math.abs(n)); el.style.color = n < 0 ? '#e94560' : '#2ed573'; }
   document.getElementById('loadWeekMiles').textContent = weekMiles.toLocaleString();
   const rpmEl = document.getElementById('loadWeekRpm');
   rpmEl.textContent = '$' + weekRpm.toFixed(2);
@@ -3858,7 +3861,10 @@ function renderLoads() {
   document.getElementById('loadFixedCostList').innerHTML = fixedCosts.map(fc =>
     `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0">
       <span>${fc.name}</span><span style="color:#e94560">$${fmt(fc.amount)}</span>
-    </div>`).join('');
+    </div>`).join('') +
+    `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0">
+      <span>Maintenance Reserve (3¢ × ${maintMiles.toLocaleString()} mi)</span><span style="color:#e94560">$${fmt(weekMaint)}</span>
+    </div>`;
 
   // Net
   const netEl = document.getElementById('loadWeekNet');
