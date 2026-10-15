@@ -3927,9 +3927,28 @@ function renderLoads() {
         </div>
         <div style="text-align:right">
           <div style="font-size:18px;font-weight:700;color:#2ed573">$${fmt(parseFloat(l.rate||0))}</div>
-          <button onclick="deleteLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e94560;font-size:12px;padding:4px 8px;cursor:pointer;margin-top:4px">🗑️ Delete</button>
+          <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px">
+            <button onclick="startEditLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:12px;padding:4px 8px;cursor:pointer">✏️ Edit</button>
+            <button onclick="deleteLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e94560;font-size:12px;padding:4px 8px;cursor:pointer">🗑️ Delete</button>
+          </div>
         </div>
       </div>
+      ${editingLoadId === l.id ? `
+      <div style="background:#111;border:1px solid #333;border-radius:8px;padding:10px;margin-top:10px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Order #</div><input id="edOrder_${l.id}" value="${(l.order||'').replace(/"/g,'&quot;')}" style="${inputStyle}"></div>
+          <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Pay $</div><input id="edRate_${l.id}" type="number" step="0.01" value="${l.rate || ''}" style="${inputStyle}"></div>
+          <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Miles</div><input id="edMiles_${l.id}" type="number" value="${l.miles || ''}" style="${inputStyle}"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Pickup</div><input id="edPickup_${l.id}" value="${(l.pickup||'').replace(/"/g,'&quot;')}" style="${inputStyle}"></div>
+          <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Delivery</div><input id="edDelivery_${l.id}" value="${(l.delivery||'').replace(/"/g,'&quot;')}" style="${inputStyle}"></div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="saveEditLoad('${l.id}')" style="flex:1;background:#2ed573;border:none;border-radius:6px;color:#0d0d0d;font-weight:700;font-size:13px;padding:8px;cursor:pointer">Save</button>
+          <button onclick="cancelEditLoad()" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:13px;padding:8px;cursor:pointer">Cancel</button>
+        </div>
+      </div>` : ''}
       <div style="display:flex;gap:6px;margin-top:10px">
         <div style="flex:1.4">
           <div style="color:${l.deliveryDate ? '#666' : '#f0a500'};font-size:10px;text-transform:uppercase;margin-bottom:3px">Delivery Date${l.deliveryDate ? '' : ' ⚠️'}</div>
@@ -3952,6 +3971,27 @@ function renderLoads() {
       </div>
     </div>`;
   }).join('');
+}
+
+let editingLoadId = null;
+function startEditLoad(id) { editingLoadId = id; renderLoads(); }
+function cancelEditLoad() { editingLoadId = null; renderLoads(); }
+function saveEditLoad(id) {
+  const l = weekLoads.find(x => x.id === id);
+  if (!l) return;
+  const v = f => document.getElementById(f + '_' + id).value;
+  const rate = parseFloat(v('edRate')) || 0;
+  if (!rate) return showToast('Enter a pay amount');
+  l.order = v('edOrder').trim();
+  l.pickup = v('edPickup').trim();
+  l.delivery = v('edDelivery').trim();
+  l.rate = rate;
+  l.miles = parseFloat(v('edMiles')) || 0;
+  l.rpm = l.miles > 0 ? (l.rate / l.miles).toFixed(2) : '—';
+  editingLoadId = null;
+  saveWeekLoads();
+  renderLoads();
+  showToast('Load updated');
 }
 
 function deleteLoad(id) {
