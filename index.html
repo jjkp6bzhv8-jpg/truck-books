@@ -330,7 +330,7 @@
         </div>
         <div style="color:#555;font-size:11px;margin-bottom:6px">Tap a day to mark it Working / Off. Days with a load count as working.</div>
         <div id="goalDaysList"></div>
-        <div id="goalWeekSummary" style="margin-top:10px;border-top:1px solid #333;padding-top:10px"></div>
+        <div id="goalWeekSummary" style="margin-top:6px"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center">
@@ -341,6 +341,10 @@
           <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Fuel This Week</div>
           <div id="loadWeekFuel" style="color:#e94560;font-size:20px;font-weight:700">$0.00</div>
         </div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
+        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Net Income</div>
+        <div id="loadWeekNet" style="color:#2ed573;font-size:20px;font-weight:700">$0.00</div>
       </div>
       <div class="eld-counter-box" style="margin-bottom:8px">
         <div class="eld-split-counter">
@@ -3826,6 +3830,7 @@ function renderLoads() {
   summary.style.display = 'block';
   document.getElementById('loadWeekGross').textContent = '$' + fmt(weekGross);
   document.getElementById('loadWeekFuel').textContent = '$' + fmt(weekFuel);
+  { const n = weekGross - weekFuel; const el = document.getElementById('loadWeekNet'); el.textContent = (n < 0 ? '−$' : '$') + fmt(Math.abs(n)); el.style.color = n < 0 ? '#e94560' : '#2ed573'; }
   document.getElementById('loadWeekMiles').textContent = weekMiles.toLocaleString();
   const rpmEl = document.getElementById('loadWeekRpm');
   rpmEl.textContent = '$' + weekRpm.toFixed(2);
@@ -3899,10 +3904,6 @@ function renderLoads() {
   const undated = weekLoads.filter(l => !l.deliveryDate).length;
   const otherWeek = weekLoads.filter(l => l.deliveryDate && !weekDays.includes(l.deliveryDate)).length;
   document.getElementById('goalWeekSummary').innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Days working</span><span style="color:#f0f0f0">${daysWorked}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Week goal (${daysWorked} × $${fmt(goal)})</span><span style="color:#f0f0f0">$${fmt(weekTarget)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888;padding:2px 0"><span>Net after fuel</span><span style="color:#f0f0f0">$${fmt(weekGoalNet)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0 0"><span style="color:#888">${diff >= 0 ? 'Over goal' : 'Under goal'}</span><span style="color:${diff >= 0 ? '#2ed573' : '#e94560'}">${diff >= 0 ? '+' : '−'}$${fmt(Math.abs(diff))}</span></div>
     ${missingPrice ? `<div style="color:#f0a500;font-size:11px;margin-top:6px">⚠️ ${missingPrice} load(s) missing fuel price — net is overstated until you enter it.</div>` : ''}
     ${undated ? `<div style="color:#f0a500;font-size:11px;margin-top:4px">⚠️ ${undated} load(s) have no delivery date — not counted until you set one.</div>` : ''}
     ${otherWeek ? `<div style="color:#888;font-size:11px;margin-top:4px">${otherWeek} load(s) deliver outside this Thu–Wed week — not counted here.</div>` : ''}`;
