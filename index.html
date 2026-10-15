@@ -287,6 +287,8 @@
         <input type="number" id="loadMiles" placeholder="e.g. 766" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
         <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Rate ($)</label>
         <input type="number" id="loadRate" placeholder="e.g. 1372.00" step="0.01" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
+        <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Detention ($)</label>
+        <input type="number" id="loadDetention" placeholder="0.00" step="0.01" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
         <label style="color:#888;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Delivery Date</label>
         <input type="date" id="loadDeliveryDate" style="width:100%;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:11px 12px;color:#f0f0f0;font-size:15px;margin-top:6px;margin-bottom:10px">
         <div style="display:flex;gap:8px">
@@ -3641,6 +3643,7 @@ function showManualLoadEntry() {
   document.getElementById('loadDelivery').value = '';
   document.getElementById('loadMiles').value = '';
   document.getElementById('loadRate').value = '';
+  document.getElementById('loadDetention').value = '';
   document.getElementById('loadDeliveryDate').value = isoToday();
   document.getElementById('loadDeadhead').value = '';
   document.getElementById('loadFuelPrice').value = '';
@@ -3682,7 +3685,7 @@ function loadCalc(l) {
   const gallons = totalMiles / getPlanMpg();
   const price = parseFloat(l.fuelPrice) || 0;
   const fuelCost = gallons * price;
-  const net = (parseFloat(l.rate) || 0) - fuelCost;
+  const net = (parseFloat(l.rate) || 0) + (parseFloat(l.detention) || 0) - fuelCost;
   return { loaded, dh, totalMiles, gallons, price, fuelCost, net, hasPrice: price > 0 };
 }
 // Price per gallon of the fuel in the tank = most recent fuel receipt (total ÷ gallons)
@@ -3725,7 +3728,8 @@ function saveManualLoad() {
   const deliveryDate = document.getElementById('loadDeliveryDate').value || '';
   const deadhead = parseFloat(document.getElementById('loadDeadhead').value) || 0;
   const fuelPrice = parseFloat(document.getElementById('loadFuelPrice').value) || 0;
-  addLoad({ order, pickup, delivery, miles, rate, deliveryDate, deadhead, fuelPrice });
+  const detention = parseFloat(document.getElementById('loadDetention').value) || 0;
+  addLoad({ order, pickup, delivery, miles, rate, detention, deliveryDate, deadhead, fuelPrice });
   document.getElementById('loadManualForm').style.display = 'none';
 }
 
@@ -3825,9 +3829,10 @@ function renderLoads() {
   const weekMaint = Math.round(maintMiles * 0.03 * 100) / 100;
   const weekFixed = fixedCosts.reduce((s,fc) => s + fc.amount, 0) + weekMaint;
 
-  const weekGross = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0), 0);
+  const weekGross = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0) + (parseFloat(l.detention)||0), 0);
+  const weekLineHaul = weekLoads.reduce((s,l) => s + parseFloat(l.rate||0), 0);
   const weekMiles = weekLoads.reduce((s,l) => s + (parseFloat(l.miles)||0), 0);
-  const weekRpm = weekMiles > 0 ? (weekGross / weekMiles) : 0;
+  const weekRpm = weekMiles > 0 ? (weekLineHaul / weekMiles) : 0;
   const weekNet = weekGross - weekFuel - weekOther - weekFixed;
 
   summary.style.display = 'block';
@@ -3926,7 +3931,8 @@ function renderLoads() {
           <div style="font-size:12px;color:#555;margin-top:2px">${l.miles ? l.miles + ' mi · $' + l.rpm + '/mi' : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:18px;font-weight:700;color:#2ed573">$${fmt(parseFloat(l.rate||0))}</div>
+          <div style="font-size:18px;font-weight:700;color:#2ed573">$${fmt(parseFloat(l.rate||0) + (parseFloat(l.detention)||0))}</div>
+          ${parseFloat(l.detention) > 0 ? `<div style="font-size:11px;color:#888">incl. $${fmt(parseFloat(l.detention))} detention</div>` : ''}
           <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px">
             <button onclick="startEditLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:12px;padding:4px 8px;cursor:pointer">✏️ Edit</button>
             <button onclick="deleteLoad('${l.id}')" style="background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e94560;font-size:12px;padding:4px 8px;cursor:pointer">🗑️ Delete</button>
@@ -3943,6 +3949,7 @@ function renderLoads() {
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Pickup</div><input id="edPickup_${l.id}" value="${(l.pickup||'').replace(/"/g,'&quot;')}" style="${inputStyle}"></div>
           <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Delivery</div><input id="edDelivery_${l.id}" value="${(l.delivery||'').replace(/"/g,'&quot;')}" style="${inputStyle}"></div>
+          <div style="flex:1"><div style="color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px">Detention $</div><input id="edDetention_${l.id}" type="number" step="0.01" value="${l.detention || ''}" placeholder="0.00" style="${inputStyle}"></div>
         </div>
         <div style="display:flex;gap:6px">
           <button onclick="saveEditLoad('${l.id}')" style="flex:1;background:#2ed573;border:none;border-radius:6px;color:#0d0d0d;font-weight:700;font-size:13px;padding:8px;cursor:pointer">Save</button>
@@ -3986,6 +3993,7 @@ function saveEditLoad(id) {
   l.pickup = v('edPickup').trim();
   l.delivery = v('edDelivery').trim();
   l.rate = rate;
+  l.detention = parseFloat(v('edDetention')) || 0;
   l.miles = parseFloat(v('edMiles')) || 0;
   l.rpm = l.miles > 0 ? (l.rate / l.miles).toFixed(2) : '—';
   editingLoadId = null;
