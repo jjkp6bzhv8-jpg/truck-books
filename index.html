@@ -1167,10 +1167,10 @@ window.onload = () => {
 
 // ── OAUTH ──
 function signIn() {
-  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-    client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPES, prompt: 'select_account'
-  });
-  window.location.href = url;
+  const params = { client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPES, include_granted_scopes: 'true' };
+  const lastEmail = localStorage.getItem('tb_email');
+  if (lastEmail) params.login_hint = lastEmail; else params.prompt = 'select_account';
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams(params);
 }
 
 function scheduleTokenRefresh(expiresIn) {
@@ -1216,6 +1216,7 @@ async function initDrive() {
   try {
     const u = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
     document.getElementById('driveEmail').textContent = u.email || '';
+    if (u.email) localStorage.setItem('tb_email', u.email);
   } catch(e) {}
   showSignedIn();
   await ensureFolder();
