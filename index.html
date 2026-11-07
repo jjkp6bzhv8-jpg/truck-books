@@ -3639,18 +3639,8 @@ function deleteWeekManualExpense(id) {
   renderLoads();
 }
 
-const DEFAULT_FIXED_COSTS = [
-  { id: 'fc1', name: 'Communications Equipment', amount: 17.00 },
-  { id: 'fc2', name: 'IEL FHUT 2290', amount: 15.00 },
-  { id: 'fc3', name: 'Bobtail', amount: 6.92 },
-  { id: 'fc4', name: 'DBD Insurance', amount: 10.38 },
-  { id: 'fc5', name: 'OCC/ACC', amount: 34.62 },
-  { id: 'fc6', name: 'Performance Escrow', amount: 50.00 },
-  { id: 'fc7', name: 'O/O Collision Insurance', amount: 127.55 },
-  { id: 'fc8', name: 'Glass Coverage', amount: 3.46 },
-  { id: 'fc9', name: 'IEL Truck Payment', amount: 675.00 },
-  { id: 'fc10', name: 'Down Payment Installment', amount: 100.00 }
-];
+// Empty on purpose: fixed costs are saved on each device, not in this public code. Add them with ➕ Add Item.
+const DEFAULT_FIXED_COSTS = [];
 
 let fixedCosts = JSON.parse(localStorage.getItem('tb_fixedCosts') || 'null');
 if (!fixedCosts) {
@@ -3725,7 +3715,7 @@ function mdyToIso(s) {
   if (!m || !d) return '';
   return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
 }
-function getDailyGoal() { const v = parseFloat(localStorage.getItem('tb_dailyGoal')); return isNaN(v) ? 369 : v; }
+function getDailyGoal() { const v = parseFloat(localStorage.getItem('tb_dailyGoal')); return isNaN(v) ? 0 : v; }
 function getPlanMpg() { const v = parseFloat(localStorage.getItem('tb_planMpg')); return (isNaN(v) || v <= 0) ? 7 : v; }
 function saveGoalSettings() {
   const g = parseFloat(document.getElementById('dailyGoalInput').value);
@@ -4444,23 +4434,8 @@ async function optimizeData() {
 // Stored in Drive as bills.json (plus a local backup copy).
 // Completely separate from receipts / P&L / audit report.
 // ══════════════════════════════════════════════════════════════
-const BILLS_DEFAULT = [
-  { id:'b_truenorth',  name:'True North',          dueDay:3,  amount:33.60,  kind:'fixed' },
-  { id:'b_verizon',    name:'Verizon',             dueDay:4,  amount:176.00, kind:'fixed' },
-  { id:'b_discover',   name:'Discover',            dueDay:9,  amount:null,   kind:'card', closeDay:12 },
-  { id:'b_monterey',   name:'Monterey Financial',  dueDay:10, amount:128.39, kind:'fixed' },
-  { id:'b_camper',     name:'Camper',              dueDay:14, amount:214.00, kind:'fixed' },
-  { id:'b_navyfed',    name:'Navy Federal',        dueDay:14, amount:null,   kind:'card', closeDay:17 },
-  { id:'b_irs',        name:'IRS',                 dueDay:15, amount:690.00, kind:'fixed' },
-  { id:'b_mitax2024',  name:'MI Tax 2024',         dueDay:15, amount:150.00, kind:'fixed' },
-  { id:'b_mitax2025',  name:'MI Tax 2025',         dueDay:15, amount:100.00, kind:'fixed' },
-  { id:'b_attorney',   name:'Attorney Retainer',   dueDay:15, amount:35.00,  kind:'fixed' },
-  { id:'b_capone',     name:'Capital One',         dueDay:19, amount:null,   kind:'card', closeDay:24 },
-  { id:'b_autoowners', name:'Auto-Owners',         dueDay:20, amount:304.67, kind:'fixed' },
-  { id:'b_ford',       name:'Ford',                dueDay:28, amount:549.00, kind:'fixed' },
-  { id:'b_progressive',name:'Progressive',         dueDay:30, amount:85.00,  kind:'fixed' },
-  { id:'b_apple',      name:'Apple Card',          dueDay:31, amount:null,   kind:'card', closeDay:31 }
-];
+// Starting list is empty on purpose: personal bills live only in Google Drive (bills.json), never in this public code.
+const BILLS_DEFAULT = [];
 const BILLS_PAID_WITH = ['Bank','Discover','Navy Federal','Capital One','Apple Card','Cash','Other'];
 let billsData = null;          // { bills:[...], months:{ 'YYYY-MM': { billId:{ amtDue, paidDate, paidAmt, paidWith } } } }
 let billsLoaded = false;       // never save to Drive until a load succeeded (same guard as receipts)
