@@ -228,6 +228,37 @@
   .home-nav-btn .hn-label { font-size: 13px; font-weight: 700; color: #f0f0f0; }
   .home-signin-prompt { text-align: center; padding: 30px 20px; }
   .home-signin-prompt p { font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+  /* ── BILLS TAB ── */
+  .bill-row { background:#141414; border:1px solid #2a2a2a; border-left:5px solid #444; border-radius:10px; padding:12px; margin-bottom:10px; }
+  .bill-row.st-paid { border-left-color:#2ed573; }
+  .bill-row.st-paidlate { border-left-color:#ffa502; }
+  .bill-row.st-soon { border-left-color:#eccc68; }
+  .bill-row.st-late { border-left-color:#e94560; }
+  .bill-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .bill-name { font-weight:700; font-size:15px; }
+  .bill-sub { font-size:12px; color:#888; margin-top:2px; }
+  .bill-amt { font-weight:700; font-size:15px; white-space:nowrap; }
+  .bill-pill { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-top:6px; }
+  .bill-pill.st-paid { background:rgba(46,213,115,0.15); color:#2ed573; }
+  .bill-pill.st-paidlate { background:rgba(255,165,2,0.15); color:#ffa502; }
+  .bill-pill.st-soon { background:rgba(236,204,104,0.15); color:#eccc68; }
+  .bill-pill.st-late { background:rgba(233,69,96,0.15); color:#e94560; }
+  .bill-pill.st-upcoming { background:#222; color:#aaa; }
+  .bill-paidline { font-size:13px; color:#ccc; margin-top:6px; }
+  .bill-form { margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .bill-form .full { grid-column:1 / -1; }
+  .bill-btns { display:flex; gap:8px; margin-top:8px; }
+  .bill-btns .btn { padding:9px; font-size:13px; }
+  .bill-small-btn { background:#222; color:#ccc; border:1px solid #333; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; }
+  .bills-month { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .bills-month button { background:#222; color:#f0f0f0; border:1px solid #333; border-radius:8px; padding:8px 14px; font-size:16px; cursor:pointer; }
+  .bills-month-label { font-size:17px; font-weight:700; }
+  .bills-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; }
+  .bills-stat-num { font-size:17px; font-weight:800; }
+  .bills-stat-lbl { font-size:10px; color:#888; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
+  .card-sched-row { display:flex; justify-content:space-between; font-size:13px; padding:7px 0; border-bottom:1px solid #222; }
+  .card-sched-row:last-child { border-bottom:none; }
+  .bills-err { background:rgba(233,69,96,0.12); border:1px solid #e94560; color:#ff8a9b; border-radius:10px; padding:12px; margin-bottom:12px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -253,10 +284,41 @@
     <div class="drawer-item" id="d-bol" onclick="switchTab('bol','');closeDrawer()"><span class="d-icon">📦</span> BOL Storage</div>
     <div class="drawer-item" id="d-export" onclick="switchTab('export','');closeDrawer()"><span class="d-icon">📤</span> Export / Audit Report</div>
     <div class="drawer-item" id="d-loads" onclick="switchTab('loads','');closeDrawer()"><span class="d-icon">🚛</span> Weekly Load Tracker</div>
+    <div class="drawer-item" id="d-bills" onclick="switchTab('bills','');closeDrawer()"><span class="d-icon">💵</span> Bills</div>
     <div class="drawer-title" style="margin-top:16px">Account</div>
     <div class="drawer-item" id="d-settings" onclick="switchTab('settings','nav-settings');closeDrawer()"><span class="d-icon">⚙️</span> Settings</div>
   </div>
 
+
+  <!-- BILLS TAB (personal bill tracker — NOT part of P&L or audit report) -->
+  <div class="section" id="tab-bills">
+    <div class="bills-month">
+      <button onclick="billsShiftMonth(-1)">‹</button>
+      <div class="bills-month-label" id="billsMonthLabel"></div>
+      <button onclick="billsShiftMonth(1)">›</button>
+    </div>
+    <div id="billsError" class="bills-err" style="display:none"></div>
+    <div class="card">
+      <div class="bills-stats">
+        <div><div class="bills-stat-num" id="billsTotal">$0</div><div class="bills-stat-lbl">Monthly bills</div></div>
+        <div><div class="bills-stat-num" id="billsPaidCount">0/0</div><div class="bills-stat-lbl">Paid</div></div>
+        <div><div class="bills-stat-num" id="billsLeft">$0</div><div class="bills-stat-lbl">Left to pay</div></div>
+      </div>
+      <div style="font-size:11px;color:#666;margin-top:10px;text-align:center">Totals count fixed bills only — credit cards not included. Personal bills — not in P&amp;L or audit report.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">💳 Card Schedule — when each one reports</div>
+      <div id="billsCardSched"></div>
+    </div>
+    <div id="billsList"></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-title" style="margin:0">⚙️ Edit Bill List</div>
+        <button class="bill-small-btn" onclick="billsToggleEditor()" id="billsEditToggle">Show</button>
+      </div>
+      <div id="billsEditor" style="display:none;margin-top:12px"></div>
+    </div>
+  </div>
 
   <!-- WEEKLY LOAD TRACKER TAB -->
   <div class="section" id="tab-loads">
@@ -1225,6 +1287,7 @@ async function initDrive() {
   await loadSettlements();
   await loadBols();
   await loadMixedReceipts();
+  await loadBills();
   renderReceipts(); renderPL(); renderEld(); renderSettlements(); renderBols(); renderHome();
 }
 
@@ -1436,6 +1499,7 @@ function switchTab(name, navId) {
   if (name === 'bol') renderBols();
   if (name === 'export') { populateExportCategories(); updateExportCatVisibility(); }
   if (name === 'loads') renderLoads();
+  if (name === 'bills') renderBills();
   if (name === 'home') renderHome();
 }
 
@@ -4374,6 +4438,267 @@ async function optimizeData() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// ── BILLS TAB — personal bill tracker ──
+// Stored in Drive as bills.json (plus a local backup copy).
+// Completely separate from receipts / P&L / audit report.
+// ══════════════════════════════════════════════════════════════
+const BILLS_DEFAULT = [
+  { id:'b_truenorth',  name:'True North',          dueDay:3,  amount:33.60,  kind:'fixed' },
+  { id:'b_verizon',    name:'Verizon',             dueDay:4,  amount:176.00, kind:'fixed' },
+  { id:'b_discover',   name:'Discover',            dueDay:9,  amount:null,   kind:'card', closeDay:12 },
+  { id:'b_monterey',   name:'Monterey Financial',  dueDay:10, amount:128.39, kind:'fixed' },
+  { id:'b_camper',     name:'Camper',              dueDay:14, amount:214.00, kind:'fixed' },
+  { id:'b_navyfed',    name:'Navy Federal',        dueDay:14, amount:null,   kind:'card', closeDay:17 },
+  { id:'b_irs',        name:'IRS',                 dueDay:15, amount:690.00, kind:'fixed' },
+  { id:'b_mitax2024',  name:'MI Tax 2024',         dueDay:15, amount:150.00, kind:'fixed' },
+  { id:'b_mitax2025',  name:'MI Tax 2025',         dueDay:15, amount:100.00, kind:'fixed' },
+  { id:'b_attorney',   name:'Attorney Retainer',   dueDay:15, amount:35.00,  kind:'fixed' },
+  { id:'b_capone',     name:'Capital One',         dueDay:19, amount:null,   kind:'card', closeDay:24 },
+  { id:'b_autoowners', name:'Auto-Owners',         dueDay:20, amount:304.67, kind:'fixed' },
+  { id:'b_ford',       name:'Ford',                dueDay:28, amount:549.00, kind:'fixed' },
+  { id:'b_progressive',name:'Progressive',         dueDay:30, amount:85.00,  kind:'fixed' },
+  { id:'b_apple',      name:'Apple Card',          dueDay:31, amount:null,   kind:'card', closeDay:31 }
+];
+const BILLS_PAID_WITH = ['Bank','Discover','Navy Federal','Capital One','Apple Card','Cash','Other'];
+let billsData = null;          // { bills:[...], months:{ 'YYYY-MM': { billId:{ amtDue, paidDate, paidAmt, paidWith } } } }
+let billsLoaded = false;       // never save to Drive until a load succeeded (same guard as receipts)
+let billsMonth = null;         // 'YYYY-MM' being viewed
+let billsOpenForm = null;      // billId whose pay form is open
+let billsEditorOpen = false;
+
+function billsYM(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function billsMonthDate(ym) { const [y,m] = ym.split('-').map(Number); return new Date(y, m-1, 1); }
+function billsDaysInMonth(ym) { const [y,m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); }
+function billsDueDate(ym, day) { const [y,m] = ym.split('-').map(Number); return new Date(y, m-1, Math.min(day, billsDaysInMonth(ym))); }
+function billsToday() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+function billsMoney(n) { return '$' + (Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function billsEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function billsDayLabel(ym, day) { return billsDueDate(ym, day).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function billsParseISO(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function billsDayDiff(a, b) { return Math.round((a - b) / 86400000); }
+
+function billsFreshData() { return { bills: JSON.parse(JSON.stringify(BILLS_DEFAULT)), months: {} }; }
+
+function billsSaveLocal() { try { localStorage.setItem('tb_bills', JSON.stringify(billsData)); } catch(e) {} }
+
+async function loadBills() {
+  billsLoaded = false;
+  try {
+    const res = await driveGet(`files?q='${folderId}' in parents and name='bills.json' and trashed=false&fields=files(id)`);
+    if (res.files && res.files.length) {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const parsed = await r.json();
+      if (parsed && Array.isArray(parsed.bills)) { billsData = parsed; if (!billsData.months) billsData.months = {}; }
+      else throw new Error('bills.json not readable');
+    } else {
+      // No Drive file yet: start from local copy if there is one, else the default list
+      let local = null; try { local = JSON.parse(localStorage.getItem('tb_bills') || 'null'); } catch(e) {}
+      billsData = (local && Array.isArray(local.bills)) ? local : billsFreshData();
+    }
+    billsLoaded = true;
+    billsSaveLocal();
+    billsShowError('');
+  } catch(e) {
+    console.error('loadBills failed', e);
+    let local = null; try { local = JSON.parse(localStorage.getItem('tb_bills') || 'null'); } catch(e2) {}
+    billsData = (local && Array.isArray(local.bills)) ? local : billsFreshData();
+    billsShowError('Could not load your bills from Google Drive. Showing the copy saved on this device. Changes will NOT sync until this is fixed — <button class="bill-small-btn" onclick="billsRetryLoad()">Retry</button>');
+  }
+}
+
+async function billsRetryLoad() { await loadBills(); renderBills(); }
+
+async function saveBills() {
+  billsSaveLocal();
+  if (!token || !folderId) { billsShowError('Not signed in to Google Drive — this change is saved on this device only.'); return false; }
+  if (!billsLoaded) { billsShowError('Bills never loaded from Drive, so this change was saved on this device only (to avoid overwriting your Drive copy). <button class="bill-small-btn" onclick="billsRetryLoad()">Retry load</button>'); return false; }
+  try {
+    const blob = new Blob([JSON.stringify(billsData)], { type: 'application/json' });
+    const res = await driveGet(`files?q='${folderId}' in parents and name='bills.json' and trashed=false&fields=files(id)`);
+    let ok;
+    if (res.files && res.files.length) {
+      const put = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${res.files[0].id}?uploadType=media`, {
+        method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob });
+      ok = put.ok; if (!ok) throw new Error('update failed (' + put.status + ')');
+    } else {
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({ name: 'bills.json', parents: [folderId] })], { type: 'application/json' }));
+      form.append('file', blob);
+      const post = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+      ok = post.ok; if (!ok) throw new Error('create failed (' + post.status + ')');
+    }
+    billsShowError('');
+    return true;
+  } catch(e) {
+    console.error('saveBills failed', e);
+    billsShowError('Bill change was NOT saved to Google Drive (' + billsEsc(e.message) + '). It is saved on this device. If you were signed in over an hour, sign out and back in, then <button class="bill-small-btn" onclick="billsRetrySave()">Retry Save</button>');
+    return false;
+  }
+}
+async function billsRetrySave() { if (await saveBills()) showToast('Bills saved ✓'); }
+
+function billsShowError(html) {
+  const el = document.getElementById('billsError');
+  if (!el) return;
+  el.innerHTML = html; el.style.display = html ? 'block' : 'none';
+}
+
+function billsMonthRec(ym) { if (!billsData.months[ym]) billsData.months[ym] = {}; return billsData.months[ym]; }
+
+function billsStatus(bill, rec, ym) {
+  const due = billsDueDate(ym, bill.dueDay);
+  if (rec && rec.paidDate) {
+    const late = billsDayDiff(billsParseISO(rec.paidDate), due);
+    return late > 0 ? { cls:'st-paidlate', text:'Paid ' + late + ' day' + (late===1?'':'s') + ' late' } : { cls:'st-paid', text:'Paid on time' };
+  }
+  const diff = billsDayDiff(due, billsToday());
+  if (diff < 0) return { cls:'st-late', text:'NOT PAID — ' + (-diff) + ' day' + (diff===-1?'':'s') + ' late' };
+  if (diff === 0) return { cls:'st-soon', text:'Due TODAY' };
+  if (diff <= 3) return { cls:'st-soon', text:'Due in ' + diff + ' day' + (diff===1?'':'s') };
+  return { cls:'st-upcoming', text:'Due in ' + diff + ' days' };
+}
+
+function renderBills() {
+  if (!billsData) { let local=null; try { local = JSON.parse(localStorage.getItem('tb_bills')||'null'); } catch(e){} billsData = (local && Array.isArray(local.bills)) ? local : billsFreshData(); }
+  if (!billsMonth) billsMonth = billsYM(new Date());
+  const ym = billsMonth, recs = billsMonthRec(ym);
+  document.getElementById('billsMonthLabel').textContent = billsMonthDate(ym).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  const bills = billsData.bills.slice().sort((a,b) => a.dueDay - b.dueDay || a.name.localeCompare(b.name));
+  // Totals: fixed bills only (cards excluded, per Scott)
+  let total = 0, left = 0, paidCount = 0;
+  bills.forEach(b => {
+    const r = recs[b.id];
+    if (r && r.paidDate) paidCount++;
+    if (b.kind === 'fixed') { total += Number(b.amount)||0; if (!(r && r.paidDate)) left += Number(b.amount)||0; }
+  });
+  document.getElementById('billsTotal').textContent = billsMoney(total);
+  document.getElementById('billsPaidCount').textContent = paidCount + '/' + bills.length;
+  document.getElementById('billsLeft').textContent = billsMoney(left);
+
+  // Card schedule
+  document.getElementById('billsCardSched').innerHTML = bills.filter(b => b.kind === 'card').map(b =>
+    `<div class="card-sched-row"><span><b>${billsEsc(b.name)}</b></span><span>Closes/reports ${b.closeDay ? billsDayLabel(ym, b.closeDay) : '—'} · Due ${billsDayLabel(ym, b.dueDay)}</span></div>`
+  ).join('') || '<div style="color:#666;font-size:13px">No cards in the list.</div>';
+
+  // Bill rows
+  document.getElementById('billsList').innerHTML = bills.map(b => {
+    const r = recs[b.id] || {};
+    const st = billsStatus(b, r, ym);
+    const amtShown = b.kind === 'card'
+      ? (r.amtDue != null && r.amtDue !== '' ? billsMoney(r.amtDue) : '<span style="color:#888;font-size:12px">varies</span>')
+      : billsMoney(b.amount);
+    let body = '';
+    if (r.paidDate) {
+      body = `<div class="bill-paidline">✔ Paid ${billsParseISO(r.paidDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${billsMoney(r.paidAmt)} · ${billsEsc(r.paidWith||'')}</div>
+        <div class="bill-btns"><button class="bill-small-btn" onclick="billsUndo('${b.id}')">Undo</button></div>`;
+    } else if (billsOpenForm === b.id) {
+      const defAmt = b.kind === 'card' ? (r.amtDue != null ? r.amtDue : '') : b.amount;
+      const t = new Date(); const todayISO = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+      body = `<div class="bill-form">
+          <div><label>Date paid</label><input type="date" id="bpDate_${b.id}" value="${todayISO}"></div>
+          <div><label>Amount paid</label><input type="number" inputmode="decimal" step="0.01" id="bpAmt_${b.id}" value="${defAmt}"></div>
+          <div class="full"><label>Paid with</label><select id="bpWith_${b.id}">${BILLS_PAID_WITH.map(p=>`<option>${p}</option>`).join('')}</select></div>
+        </div>
+        <div class="bill-btns"><button class="btn btn-red" onclick="billsMarkPaid('${b.id}')">Save Payment</button><button class="btn btn-dark" onclick="billsOpenForm=null;renderBills()">Cancel</button></div>`;
+    } else {
+      body = `<div class="bill-btns"><button class="bill-small-btn" style="background:#e94560;color:#fff;border-color:#e94560" onclick="billsOpenForm='${b.id}';renderBills()">Mark Paid</button>
+        ${b.kind === 'card' ? `<button class="bill-small-btn" onclick="billsSetCardAmt('${b.id}')">Set this month's amount</button>` : ''}</div>`;
+    }
+    return `<div class="bill-row ${st.cls}">
+      <div class="bill-top"><div><div class="bill-name">${billsEsc(b.name)}${b.kind==='card'?' 💳':''}</div><div class="bill-sub">Due ${billsDayLabel(ym, b.dueDay)}</div></div><div class="bill-amt">${amtShown}</div></div>
+      <span class="bill-pill ${st.cls}">${st.text}</span>${body}</div>`;
+  }).join('');
+
+  renderBillsEditor();
+}
+
+function billsShiftMonth(n) { const d = billsMonthDate(billsMonth || billsYM(new Date())); d.setMonth(d.getMonth()+n); billsMonth = billsYM(d); billsOpenForm = null; renderBills(); }
+
+async function billsMarkPaid(id) {
+  const date = document.getElementById('bpDate_'+id).value;
+  const amt = parseFloat(document.getElementById('bpAmt_'+id).value);
+  const withWhat = document.getElementById('bpWith_'+id).value;
+  if (!date) { showToast('Enter the date paid'); return; }
+  if (!(amt > 0)) { showToast('Enter the amount paid'); return; }
+  const rec = billsMonthRec(billsMonth);
+  rec[id] = Object.assign({}, rec[id], { paidDate: date, paidAmt: amt, paidWith: withWhat });
+  billsOpenForm = null; renderBills();
+  if (await saveBills()) showToast('Payment saved ✓');
+}
+
+async function billsUndo(id) {
+  if (!confirm('Undo this payment entry?')) return;
+  const rec = billsMonthRec(billsMonth);
+  if (rec[id]) { delete rec[id].paidDate; delete rec[id].paidAmt; delete rec[id].paidWith; }
+  renderBills();
+  if (await saveBills()) showToast('Payment removed');
+}
+
+async function billsSetCardAmt(id) {
+  const rec = billsMonthRec(billsMonth);
+  const cur = rec[id] && rec[id].amtDue != null ? rec[id].amtDue : '';
+  const v = prompt("This month's payment amount for this card:", cur);
+  if (v === null) return;
+  const n = parseFloat(v);
+  rec[id] = Object.assign({}, rec[id], { amtDue: isNaN(n) ? null : n });
+  renderBills();
+  await saveBills();
+}
+
+// ── Edit bill list ──
+function billsToggleEditor() { billsEditorOpen = !billsEditorOpen; document.getElementById('billsEditToggle').textContent = billsEditorOpen ? 'Hide' : 'Show'; renderBillsEditor(); }
+function renderBillsEditor() {
+  const el = document.getElementById('billsEditor'); if (!el) return;
+  el.style.display = billsEditorOpen ? 'block' : 'none';
+  if (!billsEditorOpen) return;
+  const bills = billsData.bills.slice().sort((a,b) => a.dueDay - b.dueDay || a.name.localeCompare(b.name));
+  el.innerHTML = bills.map(b => `
+    <div style="border-bottom:1px solid #222;padding:8px 0">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px">
+        <input id="be_name_${b.id}" value="${billsEsc(b.name)}">
+        <input id="be_day_${b.id}" type="number" min="1" max="31" value="${b.dueDay}" title="Due day">
+        <input id="be_amt_${b.id}" type="number" step="0.01" value="${b.kind==='card'?'':b.amount}" placeholder="${b.kind==='card'?'varies':''}" ${b.kind==='card'?'disabled':''}>
+      </div>
+      <div class="bill-btns"><button class="bill-small-btn" onclick="billsEditSave('${b.id}')">Save</button><button class="bill-small-btn" onclick="billsDelete('${b.id}')">Delete</button></div>
+    </div>`).join('') + `
+    <div style="margin-top:12px"><div class="card-title" style="margin-bottom:8px">Add a bill</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px">
+        <input id="be_new_name" placeholder="Name"><input id="be_new_day" type="number" min="1" max="31" placeholder="Due day"><input id="be_new_amt" type="number" step="0.01" placeholder="Amount">
+      </div>
+      <label style="margin-top:8px;display:flex;align-items:center;gap:8px;text-transform:none"><input type="checkbox" id="be_new_card" style="width:auto"> Credit card (amount varies, not in monthly total)</label>
+      <div class="bill-btns"><button class="btn btn-red" onclick="billsAdd()">Add Bill</button></div>
+      <div style="font-size:11px;color:#666;margin-top:6px">Columns: name · due day of month · amount</div>
+    </div>`;
+}
+async function billsEditSave(id) {
+  const b = billsData.bills.find(x => x.id === id); if (!b) return;
+  const name = document.getElementById('be_name_'+id).value.trim();
+  const day = parseInt(document.getElementById('be_day_'+id).value, 10);
+  if (!name || !(day >= 1 && day <= 31)) { showToast('Need a name and a due day 1–31'); return; }
+  b.name = name; b.dueDay = day;
+  if (b.kind === 'fixed') { const a = parseFloat(document.getElementById('be_amt_'+id).value); b.amount = isNaN(a) ? 0 : a; }
+  renderBills(); if (await saveBills()) showToast('Bill updated ✓');
+}
+async function billsDelete(id) {
+  const b = billsData.bills.find(x => x.id === id); if (!b) return;
+  if (!confirm('Delete "' + b.name + '" from your bill list? Past payment records stay saved.')) return;
+  billsData.bills = billsData.bills.filter(x => x.id !== id);
+  renderBills(); if (await saveBills()) showToast('Bill deleted');
+}
+async function billsAdd() {
+  const name = document.getElementById('be_new_name').value.trim();
+  const day = parseInt(document.getElementById('be_new_day').value, 10);
+  const isCard = document.getElementById('be_new_card').checked;
+  const amt = parseFloat(document.getElementById('be_new_amt').value);
+  if (!name || !(day >= 1 && day <= 31)) { showToast('Need a name and a due day 1–31'); return; }
+  if (!isCard && !(amt >= 0)) { showToast('Enter the amount'); return; }
+  billsData.bills.push({ id: 'b_' + Date.now(), name, dueDay: day, amount: isCard ? null : amt, kind: isCard ? 'card' : 'fixed' });
+  renderBills(); if (await saveBills()) showToast('Bill added ✓');
+}
 </script>
 </body>
 </html>
