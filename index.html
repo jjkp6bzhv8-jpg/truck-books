@@ -231,7 +231,8 @@
   /* ── BILLS TAB ── */
   .bill-row { background:#141414; border:1px solid #2a2a2a; border-left:5px solid #444; border-radius:10px; padding:12px; margin-bottom:10px; }
   .bill-row.st-paid { border-left-color:#2ed573; }
-  .bill-row.st-paidlate { border-left-color:#ffa502; }
+  .bill-row.st-paidlate { border-left-color:#2ed573; }
+  .bill-row.st-upcoming { border-left-color:#e94560; }
   .bill-row.st-soon { border-left-color:#eccc68; }
   .bill-row.st-late { border-left-color:#e94560; }
   .bill-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
@@ -240,7 +241,7 @@
   .bill-amt { font-weight:700; font-size:15px; white-space:nowrap; }
   .bill-pill { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-top:6px; }
   .bill-pill.st-paid { background:rgba(46,213,115,0.15); color:#2ed573; }
-  .bill-pill.st-paidlate { background:rgba(255,165,2,0.15); color:#ffa502; }
+  .bill-pill.st-paidlate { background:rgba(46,213,115,0.15); color:#2ed573; }
   .bill-pill.st-soon { background:rgba(236,204,104,0.15); color:#eccc68; }
   .bill-pill.st-late { background:rgba(233,69,96,0.15); color:#e94560; }
   .bill-pill.st-upcoming { background:#222; color:#aaa; }
@@ -4532,7 +4533,7 @@ function billsStatus(bill, rec, ym) {
   const diff = billsDayDiff(due, billsToday());
   if (diff < 0) return { cls:'st-late', text:'NOT PAID — ' + (-diff) + ' day' + (diff===-1?'':'s') + ' late' };
   if (diff === 0) return { cls:'st-soon', text:'Due TODAY' };
-  if (diff <= 3) return { cls:'st-soon', text:'Due in ' + diff + ' day' + (diff===1?'':'s') };
+  if (diff <= 7) return { cls:'st-soon', text:'Due in ' + diff + ' day' + (diff===1?'':'s') };
   return { cls:'st-upcoming', text:'Due in ' + diff + ' days' };
 }
 
